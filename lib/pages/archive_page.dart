@@ -8,7 +8,9 @@ import '../widgets/content_card.dart';
 import '../widgets/full_text_dialog.dart';
 
 class ArchivePage extends StatefulWidget {
-  const ArchivePage({super.key});
+  final ValueChanged<int> onChatWithArticle;
+
+  const ArchivePage({super.key, required this.onChatWithArticle});
 
   @override
   State<ArchivePage> createState() => _ArchivePageState();
@@ -183,6 +185,7 @@ class _ArchivePageState extends State<ArchivePage> {
                 isExpanded: _expanded.contains(r.id),
                 onToggleExpanded: () => _toggleExpanded(r.id),
                 onShowFullText: () => showFullTextDialog(context, r),
+                onChatWithArticle: () => widget.onChatWithArticle(r.id),
               ),
               const SizedBox(height: 16),
             ],
@@ -199,12 +202,14 @@ class _ArchiveCard extends StatelessWidget {
   final bool isExpanded;
   final VoidCallback onToggleExpanded;
   final VoidCallback onShowFullText;
+  final VoidCallback onChatWithArticle;
 
   const _ArchiveCard({
     required this.record,
     required this.isExpanded,
     required this.onToggleExpanded,
     required this.onShowFullText,
+    required this.onChatWithArticle,
   });
 
   @override
@@ -291,7 +296,7 @@ class _ArchiveCard extends StatelessWidget {
             children: [
               if (r.data.original != null)
                 TextButton(
-                  onPressed: () {},
+                  onPressed: onChatWithArticle,
                   style: TextButton.styleFrom(
                     backgroundColor: AppColors.indigo600,
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -380,7 +385,7 @@ class _ArchiveCard extends StatelessWidget {
           children: [
             if (r.data.original != null)
               ElevatedButton(
-                onPressed: () {},
+                onPressed: onChatWithArticle,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.indigo600,
                   foregroundColor: Colors.white,

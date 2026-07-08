@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../constants/pipeline_defaults.dart';
+import '../services/chat_config.dart';
 import '../services/supabase_config.dart';
 import '../theme/app_colors.dart';
 import '../widgets/content_card.dart';
@@ -25,6 +26,13 @@ class _SettingsPageState extends State<SettingsPage> {
   final List<String> _categories = List.of(kDefaultCategories);
   final _newCategoryController = TextEditingController();
 
+  final Map<String, TextEditingController> _apiKeyControllers = {
+    for (final p in kProviders) p.id: TextEditingController(),
+  };
+  final Map<String, TextEditingController> _modelControllers = {
+    for (final p in kProviders) p.id: TextEditingController(),
+  };
+
   @override
   void initState() {
     super.initState();
@@ -33,9 +41,15 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _loadConfig() async {
     final config = await SupabaseConfigStore.load();
+    final apiKeys = await ChatConfigStore.loadApiKeys();
+    final models = await ChatConfigStore.loadModels();
     if (!mounted) return;
     _urlController.text = config.url;
     _anonKeyController.text = config.anonKey;
+    for (final p in kProviders) {
+      _apiKeyControllers[p.id]!.text = apiKeys[p.id] ?? '';
+      _modelControllers[p.id]!.text = models[p.id] ?? kDefaultModels[p.id]!;
+    }
     setState(() => _loaded = true);
   }
 
@@ -45,11 +59,29 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
+  Future<void> _saveApiKeys() async {
+    await ChatConfigStore.saveApiKeys({
+      for (final p in kProviders) p.id: _apiKeyControllers[p.id]!.text,
+    });
+  }
+
+  Future<void> _saveModels() async {
+    await ChatConfigStore.saveModels({
+      for (final p in kProviders) p.id: _modelControllers[p.id]!.text,
+    });
+  }
+
   @override
   void dispose() {
     _urlController.dispose();
     _anonKeyController.dispose();
     _newCategoryController.dispose();
+    for (final c in _apiKeyControllers.values) {
+      c.dispose();
+    }
+    for (final c in _modelControllers.values) {
+      c.dispose();
+    }
     super.dispose();
   }
 
@@ -231,8 +263,9 @@ class _SettingsPageState extends State<SettingsPage> {
               const Text('API Key', style: TextStyle(color: AppColors.slate500, fontSize: 12)),
               const SizedBox(height: 6),
               TextField(
+                controller: _apiKeyControllers[p.id],
                 obscureText: true,
-                onChanged: (_) {},
+                onChanged: (_) => _saveApiKeys(),
                 style: const TextStyle(color: AppColors.slate100, fontSize: 13),
                 decoration: _fieldDecoration(hint: '${p.label} API Key'),
               ),
@@ -240,8 +273,8 @@ class _SettingsPageState extends State<SettingsPage> {
               const Text('Model name', style: TextStyle(color: AppColors.slate500, fontSize: 12)),
               const SizedBox(height: 6),
               TextField(
-                controller: TextEditingController(text: kDefaultModels[p.id]),
-                onChanged: (_) {},
+                controller: _modelControllers[p.id],
+                onChanged: (_) => _saveModels(),
                 style: const TextStyle(color: AppColors.slate100, fontSize: 13),
                 decoration: _fieldDecoration(),
               ),

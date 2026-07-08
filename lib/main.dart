@@ -49,21 +49,31 @@ class HomeShell extends StatefulWidget {
 
 class _HomeShellState extends State<HomeShell> {
   int _index = 0;
-
-  static const _pages = [
-    PendingPage(),
-    ArchivePage(),
-    ChatPage(),
-    SettingsPage(),
-  ];
+  int? _chatTargetId;
+  int _chatTargetSeq = 0;
 
   static const _titles = ['Pending Approval', 'Archive', 'Chat', 'Settings'];
 
+  void _openChatWithArticle(int contentId) {
+    setState(() {
+      _chatTargetId = contentId;
+      _chatTargetSeq++;
+      _index = 2;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    final pages = [
+      const PendingPage(),
+      ArchivePage(onChatWithArticle: _openChatWithArticle),
+      ChatPage(initialContentId: _chatTargetId, initialRequestSeq: _chatTargetSeq),
+      const SettingsPage(),
+    ];
+
     return Scaffold(
       appBar: AppBar(title: Text(_titles[_index])),
-      body: SafeArea(child: IndexedStack(index: _index, children: _pages)),
+      body: SafeArea(child: IndexedStack(index: _index, children: pages)),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
         onDestinationSelected: (i) => setState(() => _index = i),
