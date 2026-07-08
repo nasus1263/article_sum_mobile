@@ -318,7 +318,6 @@ class _ArchiveCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final r = record;
     final summary = r.data.firstSummary;
-    final isRegenerating = r.data.processing && r.data.stage == 'Regenerating summary...';
 
     if (!isExpanded) {
       final collapsedContent = ContentCard(
@@ -437,13 +436,21 @@ class _ArchiveCard extends StatelessWidget {
         ],
       );
 
-      if (isRegenerating) {
-        return IgnorePointer(
-          ignoring: true,
-          child: Opacity(
-            opacity: 0.5,
-            child: collapsedContent,
-          ),
+      if (r.data.processing) {
+        return Stack(
+          alignment: Alignment.center,
+          children: [
+            IgnorePointer(
+              ignoring: true,
+              child: Opacity(
+                opacity: 0.5,
+                child: collapsedContent,
+              ),
+            ),
+            const CircularProgressIndicator(
+              color: AppColors.indigo500,
+            ),
+          ],
         );
       }
       return collapsedContent;
@@ -651,13 +658,21 @@ class _ArchiveCard extends StatelessWidget {
       ],
     );
 
-    if (isRegenerating) {
-      return IgnorePointer(
-        ignoring: true,
-        child: Opacity(
-          opacity: 0.5,
-          child: expandedContent,
-        ),
+    if (r.data.processing) {
+      return Stack(
+        alignment: Alignment.center,
+        children: [
+          IgnorePointer(
+            ignoring: true,
+            child: Opacity(
+              opacity: 0.5,
+              child: expandedContent,
+            ),
+          ),
+          const CircularProgressIndicator(
+            color: AppColors.indigo500,
+          ),
+        ],
       );
     }
     return expandedContent;

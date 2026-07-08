@@ -264,7 +264,6 @@ class _PendingCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final r = record;
     final summary = r.data.firstSummary;
-    final isRegenerating = r.data.processing && r.data.stage == 'Regenerating summary...';
 
     Widget cardContent = ContentCard(
       children: [
@@ -379,13 +378,21 @@ class _PendingCard extends StatelessWidget {
       ],
     );
 
-    if (isRegenerating) {
-      return IgnorePointer(
-        ignoring: true,
-        child: Opacity(
-          opacity: 0.5,
-          child: cardContent,
-        ),
+    if (r.data.processing) {
+      return Stack(
+        alignment: Alignment.center,
+        children: [
+          IgnorePointer(
+            ignoring: true,
+            child: Opacity(
+              opacity: 0.5,
+              child: cardContent,
+            ),
+          ),
+          const CircularProgressIndicator(
+            color: AppColors.indigo500,
+          ),
+        ],
       );
     }
     return cardContent;
