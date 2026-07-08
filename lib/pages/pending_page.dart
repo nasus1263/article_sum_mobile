@@ -36,7 +36,7 @@ class _PendingPageState extends State<PendingPage> {
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
     setState(() {
-      _backendUrl = config.backendUrl;
+      _backendUrl = config.cleanBackendUrl;
       _activeFolder = prefs.getString('active_folder');
     });
   }

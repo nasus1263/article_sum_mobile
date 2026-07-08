@@ -43,7 +43,7 @@ class _ArchivePageState extends State<ArchivePage> {
     final config = await SupabaseConfigStore.load();
     if (!mounted) return;
     setState(() {
-      _backendUrl = config.backendUrl;
+      _backendUrl = config.cleanBackendUrl;
     });
   }
 

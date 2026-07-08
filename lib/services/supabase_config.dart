@@ -18,6 +18,8 @@ class SupabaseConfig {
 
   bool get isConfigured => url.isNotEmpty && anonKey.isNotEmpty;
 
+  String get cleanBackendUrl => backendUrl.replaceAll(RegExp(r'/+$'), '');
+
   SupabaseConfig copyWith({String? url, String? anonKey, String? backendUrl}) =>
       SupabaseConfig(
         url: url ?? this.url,
