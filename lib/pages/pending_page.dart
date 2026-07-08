@@ -23,7 +23,7 @@ class _PendingPageState extends State<PendingPage> {
   List<ContentRecord>? _records;
   String? _error;
   String? _activeFolder;
-  String _backendUrl = 'http://127.0.0.1:3000';
+  String _backendUrl = kDefaultBackendUrl;
   PipelineSettings _pipelineSettings = const PipelineSettings();
 
   @override

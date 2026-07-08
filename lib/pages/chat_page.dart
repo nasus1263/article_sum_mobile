@@ -39,7 +39,7 @@ class _ChatPageState extends State<ChatPage> {
   bool _sending = false;
   String? _error;
   String _provider = 'claude';
-  String _backendUrl = 'http://127.0.0.1:3000';
+  String _backendUrl = kDefaultBackendUrl;
 
   @override
   void initState() {

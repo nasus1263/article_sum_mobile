@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../constants/pipeline_defaults.dart';
 import '../services/pipeline_settings_store.dart';
 import '../services/supabase_config.dart';
+import '../services/system_settings.dart';
 import '../theme/app_colors.dart';
 import '../widgets/content_card.dart';
 
@@ -282,8 +283,43 @@ class _SettingsPageState extends State<SettingsPage> {
             TextField(
               controller: _backendUrlController,
               style: const TextStyle(color: AppColors.slate100, fontSize: 13),
-              decoration: _fieldDecoration(hint: 'http://127.0.0.1:3000'),
+              decoration: _fieldDecoration(hint: kDefaultBackendUrl),
               onChanged: (_) => _saveConfig(),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 24),
+        const Text(
+          'Background link detection',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: AppColors.slate200,
+          ),
+        ),
+        const SizedBox(height: 12),
+        ContentCard(
+          children: [
+            const Text(
+              '앱을 열지 않아도 링크 복사를 감지하려면 접근성 권한이 필요합니다. '
+              '아래 버튼으로 설정을 열고 "Clip Brief 클립보드 감시"를 켜주세요.',
+              style: TextStyle(color: AppColors.slate500, fontSize: 12),
+            ),
+            const SizedBox(height: 12),
+            ElevatedButton(
+              onPressed: SystemSettings.openAccessibilitySettings,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.indigo600,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text(
+                '접근성 설정 열기',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+              ),
             ),
           ],
         ),

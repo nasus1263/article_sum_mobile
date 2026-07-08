@@ -28,7 +28,7 @@ class _ArchivePageState extends State<ArchivePage> {
   final Set<String> _categoryFilter = {};
   final Set<int> _expanded = {};
   final Map<int, List<ContentRecord>> _relatedMap = {};
-  String _backendUrl = 'http://127.0.0.1:3000';
+  String _backendUrl = kDefaultBackendUrl;
   PipelineSettings _pipelineSettings = const PipelineSettings();
 
   @override

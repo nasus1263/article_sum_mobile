@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="clipboard_service_label">Clip Brief 클립보드 감시</string>
+    <string name="clipboard_service_description">클립보드에 복사된 기사 링크를 백그라운드에서 감지해 처리합니다. 화면 내용은 읽지 않습니다.</string>
+</resources>

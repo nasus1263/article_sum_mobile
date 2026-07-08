@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'pages/archive_page.dart';
@@ -9,12 +11,27 @@ import 'pages/login_page.dart';
 import 'pages/pending_page.dart';
 import 'pages/settings_page.dart';
 import 'services/auth_service.dart';
+import 'services/clipboard_background.dart';
 import 'services/clipboard_watcher.dart';
 import 'services/supabase_client_provider.dart';
 import 'theme/app_colors.dart';
 
+/// Must match ClipboardAccessibilityService.CALLBACK_HANDLE_KEY (without the
+/// "flutter." prefix the shared_preferences plugin adds on Android).
+const _kClipboardCallbackHandleKey = 'clipboard_callback_handle';
+
 void main() {
+  _registerClipboardCallbackHandle();
   runApp(const ArticleSummaryApp());
+}
+
+/// The callback handle can change between builds, so it's re-registered on
+/// every app start for ClipboardAccessibilityService to look up later.
+Future<void> _registerClipboardCallbackHandle() async {
+  final handle = PluginUtilities.getCallbackHandle(clipboardCallbackDispatcher);
+  if (handle == null) return;
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setInt(_kClipboardCallbackHandleKey, handle.toRawHandle());
 }
 
 class ArticleSummaryApp extends StatelessWidget {

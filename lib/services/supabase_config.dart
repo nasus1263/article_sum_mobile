@@ -3,7 +3,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 const _kDefaultUrl = 'https://wjzdjvyefjtivtayayfc.supabase.co/';
 const _kDefaultAnonKey =
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndqemRqdnllZmp0aXZ0YXlheWZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM1MTE0OTYsImV4cCI6MjA5OTA4NzQ5Nn0.MxIpIu7kCJn__MF_ciyLpCbSQ0dIeMf8sgfuVhSYfl0';
-const _kDefaultBackendUrl = 'http://127.0.0.1:3000';
+
+/// Default backend URL shown/used before the user configures one in Settings.
+const kDefaultBackendUrl = 'http://127.0.0.1:3000';
 
 class SupabaseConfig {
   final String url;
@@ -13,7 +15,7 @@ class SupabaseConfig {
   const SupabaseConfig({
     this.url = _kDefaultUrl,
     this.anonKey = _kDefaultAnonKey,
-    this.backendUrl = _kDefaultBackendUrl,
+    this.backendUrl = kDefaultBackendUrl,
   });
 
   bool get isConfigured => url.isNotEmpty && anonKey.isNotEmpty;
@@ -39,7 +41,7 @@ class SupabaseConfigStore {
     return SupabaseConfig(
       url: prefs.getString(_urlKey) ?? _kDefaultUrl,
       anonKey: prefs.getString(_anonKeyKey) ?? _kDefaultAnonKey,
-      backendUrl: prefs.getString(_backendUrlKey) ?? _kDefaultBackendUrl,
+      backendUrl: prefs.getString(_backendUrlKey) ?? kDefaultBackendUrl,
     );
   }
 
