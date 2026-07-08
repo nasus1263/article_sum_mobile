@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+import '../constants/pipeline_defaults.dart';
 import '../models/content_record.dart';
 import '../services/content_repository.dart';
+import '../services/supabase_config.dart';
 import '../theme/app_colors.dart';
 import '../widgets/content_card.dart';
 import '../widgets/full_text_dialog.dart';
@@ -18,11 +21,34 @@ class _PendingPageState extends State<PendingPage> {
   final _repo = ContentRepository();
   List<ContentRecord>? _records;
   String? _error;
+  String? _activeFolder;
+  String _backendUrl = 'http://127.0.0.1:3000';
 
   @override
   void initState() {
     super.initState();
+    _loadSettings();
     _refresh();
+  }
+
+  Future<void> _loadSettings() async {
+    final config = await SupabaseConfigStore.load();
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() {
+      _backendUrl = config.backendUrl;
+      _activeFolder = prefs.getString('active_folder');
+    });
+  }
+
+  Future<void> _saveActiveFolder(String? folder) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (folder == null) {
+      await prefs.remove('active_folder');
+    } else {
+      await prefs.setString('active_folder', folder);
+    }
+    setState(() => _activeFolder = folder);
   }
 
   Future<void> _refresh() async {
@@ -34,6 +60,75 @@ class _PendingPageState extends State<PendingPage> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _error = e.toString());
+    }
+  }
+
+  Future<void> _handleApprove(int id) async {
+    try {
+      await _repo.approve(id, folder: _activeFolder);
+      await _refresh();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Approve failed: $e')),
+      );
+    }
+  }
+
+  Future<void> _handleDiscard(int id) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.slate900,
+        title: const Text('Discard this item?', style: TextStyle(color: AppColors.slate100)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.slate400)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Discard', style: TextStyle(color: AppColors.red400)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    try {
+      await _repo.discard(id);
+      await _refresh();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Discard failed: $e')),
+      );
+    }
+  }
+
+  Future<void> _handleCancel(int id) async {
+    try {
+      await _repo.discard(id); // cancel on desktop aborts active job and discards the record
+      await _refresh();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Cancel failed: $e')),
+      );
+    }
+  }
+
+  Future<void> _handleRegenerate(int id) async {
+    try {
+      // Run in background and update database state
+      await _repo.regenerateSummary(id, _backendUrl);
+      await _refresh();
+    } catch (e) {
+      await _refresh(); // Refresh to show error on the card
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Regeneration failed: $e')),
+      );
     }
   }
 
@@ -64,35 +159,86 @@ class _PendingPageState extends State<PendingPage> {
       );
     }
 
-    if (records.isEmpty) {
-      return RefreshIndicator(
-        onRefresh: _refresh,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: const [
-            Padding(
-              padding: EdgeInsets.only(top: 32),
-              child: Text(
-                'No items pending approval. Try copying a link.',
-                style: TextStyle(color: AppColors.slate500, fontSize: 13),
+    return Column(
+      children: [
+        // Active folder selector
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+          child: Row(
+            children: [
+              const Text(
+                'Approve into folder: ',
+                style: TextStyle(color: AppColors.slate400, fontSize: 13, fontWeight: FontWeight.w500),
               ),
-            ),
-          ],
+              const SizedBox(width: 12),
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  initialValue: _activeFolder,
+                  dropdownColor: AppColors.slate900,
+                  decoration: const InputDecoration(
+                    filled: true,
+                    fillColor: AppColors.slate900,
+                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(8)),
+                      borderSide: BorderSide(color: AppColors.slate700),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(8)),
+                      borderSide: BorderSide(color: AppColors.slate700),
+                    ),
+                  ),
+                  style: const TextStyle(color: AppColors.slate100, fontSize: 13),
+                  items: [
+                    const DropdownMenuItem<String>(
+                      value: null,
+                      child: Text('No folder'),
+                    ),
+                    ...kDefaultCategories.map(
+                      (c) => DropdownMenuItem<String>(
+                        value: c,
+                        child: Text(c),
+                      ),
+                    ),
+                  ],
+                  onChanged: _saveActiveFolder,
+                ),
+              ),
+            ],
+          ),
         ),
-      );
-    }
-
-    return RefreshIndicator(
-      onRefresh: _refresh,
-      child: ListView.separated(
-        padding: const EdgeInsets.all(16),
-        itemCount: records.length,
-        separatorBuilder: (_, _) => const SizedBox(height: 16),
-        itemBuilder: (context, i) => _PendingCard(
-          record: records[i],
-          onShowFullText: () => showFullTextDialog(context, records[i]),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: _refresh,
+            child: records.isEmpty
+                ? ListView(
+                    padding: const EdgeInsets.all(16),
+                    children: const [
+                      Padding(
+                        padding: EdgeInsets.only(top: 32),
+                        child: Text(
+                          'No items pending approval. Try copying a link.',
+                          style: TextStyle(color: AppColors.slate500, fontSize: 13),
+                        ),
+                      ),
+                    ],
+                  )
+                : ListView.separated(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: records.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 16),
+                    itemBuilder: (context, i) => _PendingCard(
+                      record: records[i],
+                      onShowFullText: () => showFullTextDialog(context, records[i]),
+                      onApprove: () => _handleApprove(records[i].id),
+                      onDiscard: () => _handleDiscard(records[i].id),
+                      onCancel: () => _handleCancel(records[i].id),
+                      onRegenerate: () => _handleRegenerate(records[i].id),
+                    ),
+                  ),
+          ),
         ),
-      ),
+      ],
     );
   }
 }
@@ -100,23 +246,32 @@ class _PendingPageState extends State<PendingPage> {
 class _PendingCard extends StatelessWidget {
   final ContentRecord record;
   final VoidCallback onShowFullText;
+  final VoidCallback onApprove;
+  final VoidCallback onDiscard;
+  final VoidCallback onCancel;
+  final VoidCallback onRegenerate;
 
   const _PendingCard({
     required this.record,
     required this.onShowFullText,
+    required this.onApprove,
+    required this.onDiscard,
+    required this.onCancel,
+    required this.onRegenerate,
   });
 
   @override
   Widget build(BuildContext context) {
     final r = record;
     final summary = r.data.firstSummary;
+    final isRegenerating = r.data.processing && r.data.stage == 'Regenerating summary...';
 
-    return ContentCard(
+    Widget cardContent = ContentCard(
       children: [
         Row(
           children: [
             if (r.data.processing)
-              Pill(label: r.data.stage ?? 'Processing...')
+              Pill(label: '🔄 ${r.data.stage ?? "Processing..."}')
             else
               TagBadge(tag: r.tag),
             if (r.data.category != null) ...[
@@ -189,18 +344,26 @@ class _PendingCard extends StatelessWidget {
                   style: TextStyle(color: AppColors.slate400, fontSize: 12),
                 ),
               ),
+            if (r.data.original != null && !r.data.processing)
+              TextButton(
+                onPressed: onRegenerate,
+                child: const Text(
+                  'Regenerate',
+                  style: TextStyle(color: AppColors.indigo400, fontSize: 12),
+                ),
+              ),
             if (r.data.processing)
               TextButton(
-                onPressed: () {},
+                onPressed: onCancel,
                 child: const Text('Cancel', style: TextStyle(color: AppColors.red400, fontSize: 12)),
               )
             else ...[
               TextButton(
-                onPressed: () {},
+                onPressed: onDiscard,
                 child: const Text('Discard', style: TextStyle(color: AppColors.red400, fontSize: 12)),
               ),
               ElevatedButton(
-                onPressed: () {},
+                onPressed: onApprove,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.indigo600,
                   foregroundColor: Colors.white,
@@ -215,5 +378,16 @@ class _PendingCard extends StatelessWidget {
         ),
       ],
     );
+
+    if (isRegenerating) {
+      return IgnorePointer(
+        ignoring: true,
+        child: Opacity(
+          opacity: 0.5,
+          child: cardContent,
+        ),
+      );
+    }
+    return cardContent;
   }
 }

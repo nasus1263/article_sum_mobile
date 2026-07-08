@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../constants/pipeline_defaults.dart';
 import '../models/chat_models.dart';
 import '../models/content_record.dart';
 import '../services/chat_config.dart';
@@ -332,18 +331,6 @@ class _ChatPageState extends State<ChatPage> {
                     ),
                   ],
                 ),
-              ),
-              DropdownButton<String>(
-                value: _provider,
-                dropdownColor: AppColors.slate900,
-                style: const TextStyle(color: AppColors.slate100, fontSize: 13),
-                underline: const SizedBox.shrink(),
-                items: kProviders
-                    .map((p) => DropdownMenuItem(value: p.id, child: Text(p.label)))
-                    .toList(),
-                onChanged: (v) {
-                  if (v != null) setState(() => _provider = v);
-                },
               ),
             ],
           ),

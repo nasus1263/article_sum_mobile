@@ -14,8 +14,7 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  final _urlController = TextEditingController();
-  final _anonKeyController = TextEditingController();
+  final _backendUrlController = TextEditingController();
   bool _loaded = false;
 
   // Display-only pipeline defaults — not persisted, not wired to a backend.
@@ -44,8 +43,7 @@ class _SettingsPageState extends State<SettingsPage> {
     final apiKeys = await ChatConfigStore.loadApiKeys();
     final models = await ChatConfigStore.loadModels();
     if (!mounted) return;
-    _urlController.text = config.url;
-    _anonKeyController.text = config.anonKey;
+    _backendUrlController.text = config.backendUrl;
     for (final p in kProviders) {
       _apiKeyControllers[p.id]!.text = apiKeys[p.id] ?? '';
       _modelControllers[p.id]!.text = models[p.id] ?? kDefaultModels[p.id]!;
@@ -54,8 +52,9 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _saveConfig() async {
+    final config = await SupabaseConfigStore.load();
     await SupabaseConfigStore.save(
-      SupabaseConfig(url: _urlController.text, anonKey: _anonKeyController.text),
+      config.copyWith(backendUrl: _backendUrlController.text),
     );
   }
 
@@ -73,8 +72,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   void dispose() {
-    _urlController.dispose();
-    _anonKeyController.dispose();
+    _backendUrlController.dispose();
     _newCategoryController.dispose();
     for (final c in _apiKeyControllers.values) {
       c.dispose();
@@ -228,27 +226,17 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
 
         const SizedBox(height: 24),
-        const Text('Database (Supabase)',
+        const Text('Backend Settings',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.slate200)),
         const SizedBox(height: 12),
         ContentCard(
           children: [
-            const Text('Project URL', style: TextStyle(color: AppColors.slate500, fontSize: 12)),
+            const Text('Backend URL', style: TextStyle(color: AppColors.slate500, fontSize: 12)),
             const SizedBox(height: 6),
             TextField(
-              controller: _urlController,
+              controller: _backendUrlController,
               style: const TextStyle(color: AppColors.slate100, fontSize: 13),
-              decoration: _fieldDecoration(hint: 'https://xxxxx.supabase.co'),
-              onChanged: (_) => _saveConfig(),
-            ),
-            const SizedBox(height: 12),
-            const Text('Anon key', style: TextStyle(color: AppColors.slate500, fontSize: 12)),
-            const SizedBox(height: 6),
-            TextField(
-              controller: _anonKeyController,
-              obscureText: true,
-              style: const TextStyle(color: AppColors.slate100, fontSize: 13),
-              decoration: _fieldDecoration(),
+              decoration: _fieldDecoration(hint: 'http://127.0.0.1:3000'),
               onChanged: (_) => _saveConfig(),
             ),
           ],

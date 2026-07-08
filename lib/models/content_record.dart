@@ -8,6 +8,7 @@ class ContentData {
   final String? thumbnail;
   final String? error;
   final String? folder;
+  final String? embeddingError;
 
   const ContentData({
     this.original,
@@ -19,6 +20,7 @@ class ContentData {
     this.thumbnail,
     this.error,
     this.folder,
+    this.embeddingError,
   });
 
   factory ContentData.fromJson(Map<String, dynamic> json) {
@@ -35,7 +37,23 @@ class ContentData {
       thumbnail: json['thumbnail'] as String?,
       error: json['error'] as String?,
       folder: json['folder'] as String?,
+      embeddingError: json['embeddingError'] as String?,
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'original': original,
+      'title': title,
+      'category': category,
+      'summaries': summaries,
+      'processing': processing,
+      'stage': stage,
+      'thumbnail': thumbnail,
+      'error': error,
+      'folder': folder,
+      'embeddingError': embeddingError,
+    };
   }
 
   String? get firstSummary =>

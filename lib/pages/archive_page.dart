@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../models/content_record.dart';
 import '../services/content_repository.dart';
+import '../services/supabase_config.dart';
 import '../theme/app_colors.dart';
 import '../widgets/content_card.dart';
 import '../widgets/full_text_dialog.dart';
@@ -24,13 +26,24 @@ class _ArchivePageState extends State<ArchivePage> {
   String _search = '';
   final Set<String> _categoryFilter = {};
   final Set<int> _expanded = {};
+  final Map<int, List<ContentRecord>> _relatedMap = {};
+  String _backendUrl = 'http://127.0.0.1:3000';
 
   @override
   void initState() {
     super.initState();
+    _loadSettings();
     _refresh();
     _searchController.addListener(() {
       setState(() => _search = _searchController.text);
+    });
+  }
+
+  Future<void> _loadSettings() async {
+    final config = await SupabaseConfigStore.load();
+    if (!mounted) return;
+    setState(() {
+      _backendUrl = config.backendUrl;
     });
   }
 
@@ -58,8 +71,22 @@ class _ArchivePageState extends State<ArchivePage> {
         _expanded.remove(id);
       } else {
         _expanded.add(id);
+        _fetchRelatedIfNeeded(id);
       }
     });
+  }
+
+  Future<void> _fetchRelatedIfNeeded(int id) async {
+    if (_relatedMap.containsKey(id)) return;
+    try {
+      final related = await _repo.getRelated(id);
+      if (!mounted) return;
+      setState(() {
+        _relatedMap[id] = related;
+      });
+    } catch (_) {
+      // Ignore errors fetching related articles gracefully
+    }
   }
 
   void _toggleCategory(String category) {
@@ -70,6 +97,66 @@ class _ArchivePageState extends State<ArchivePage> {
         _categoryFilter.add(category);
       }
     });
+  }
+
+  Future<void> _handleDelete(int id) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.slate900,
+        title: const Text('Delete this item?', style: TextStyle(color: AppColors.slate100)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.slate400)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Delete', style: TextStyle(color: AppColors.red400)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    try {
+      await _repo.discard(id);
+      await _refresh();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Delete failed: $e')),
+      );
+    }
+  }
+
+  Future<void> _handleViewOnWeb(String url) async {
+    final uri = Uri.parse(url);
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        throw 'Could not launch $url';
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error opening link: $e')),
+      );
+    }
+  }
+
+  Future<void> _handleRegenerate(int id) async {
+    try {
+      await _repo.regenerateSummary(id, _backendUrl);
+      await _refresh();
+    } catch (e) {
+      await _refresh();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Regeneration failed: $e')),
+      );
+    }
   }
 
   @override
@@ -186,6 +273,11 @@ class _ArchivePageState extends State<ArchivePage> {
                 onToggleExpanded: () => _toggleExpanded(r.id),
                 onShowFullText: () => showFullTextDialog(context, r),
                 onChatWithArticle: () => widget.onChatWithArticle(r.id),
+                onDelete: () => _handleDelete(r.id),
+                onViewOnWeb: () => _handleViewOnWeb(r.url),
+                onRegenerate: () => _handleRegenerate(r.id),
+                relatedArticles: _relatedMap[r.id],
+                onShowRelatedFullText: (related) => showFullTextDialog(context, related),
               ),
               const SizedBox(height: 16),
             ],
@@ -203,6 +295,11 @@ class _ArchiveCard extends StatelessWidget {
   final VoidCallback onToggleExpanded;
   final VoidCallback onShowFullText;
   final VoidCallback onChatWithArticle;
+  final VoidCallback onDelete;
+  final VoidCallback onViewOnWeb;
+  final VoidCallback onRegenerate;
+  final List<ContentRecord>? relatedArticles;
+  final Function(ContentRecord) onShowRelatedFullText;
 
   const _ArchiveCard({
     required this.record,
@@ -210,17 +307,23 @@ class _ArchiveCard extends StatelessWidget {
     required this.onToggleExpanded,
     required this.onShowFullText,
     required this.onChatWithArticle,
+    required this.onDelete,
+    required this.onViewOnWeb,
+    required this.onRegenerate,
+    required this.relatedArticles,
+    required this.onShowRelatedFullText,
   });
 
   @override
   Widget build(BuildContext context) {
     final r = record;
     final summary = r.data.firstSummary;
+    final isRegenerating = r.data.processing && r.data.stage == 'Regenerating summary...';
 
     if (!isExpanded) {
-      return ContentCard(
+      final collapsedContent = ContentCard(
         padding: const EdgeInsets.all(8),
-        onTap: onToggleExpanded,
+        onTap: r.data.processing ? null : onToggleExpanded,
         children: [
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -258,7 +361,10 @@ class _ArchiveCard extends StatelessWidget {
                       spacing: 6,
                       runSpacing: 4,
                       children: [
-                        TagBadge(tag: r.tag),
+                        if (r.data.processing)
+                          Pill(label: '🔄 ${r.data.stage ?? "Processing..."}')
+                        else
+                          TagBadge(tag: r.tag),
                         if (r.data.category != null) Pill(label: r.data.category!),
                       ],
                     ),
@@ -317,7 +423,7 @@ class _ArchiveCard extends StatelessWidget {
                       style: TextStyle(color: AppColors.slate200, fontSize: 11, fontWeight: FontWeight.w500)),
                 ),
               TextButton(
-                onPressed: () {},
+                onPressed: onViewOnWeb,
                 style: TextButton.styleFrom(
                   backgroundColor: AppColors.slate800,
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -330,9 +436,20 @@ class _ArchiveCard extends StatelessWidget {
           ),
         ],
       );
+
+      if (isRegenerating) {
+        return IgnorePointer(
+          ignoring: true,
+          child: Opacity(
+            opacity: 0.5,
+            child: collapsedContent,
+          ),
+        );
+      }
+      return collapsedContent;
     }
 
-    return ContentCard(
+    final expandedContent = ContentCard(
       children: [
         InkWell(
           onTap: onToggleExpanded,
@@ -340,10 +457,17 @@ class _ArchiveCard extends StatelessWidget {
             children: [
               const Text('▾', style: TextStyle(color: AppColors.slate600, fontSize: 12)),
               const SizedBox(width: 8),
-              TagBadge(tag: r.tag),
+              if (r.data.processing)
+                Pill(label: '🔄 ${r.data.stage ?? "Processing..."}')
+              else
+                TagBadge(tag: r.tag),
               if (r.data.category != null) ...[
                 const SizedBox(width: 6),
                 Pill(label: r.data.category!),
+              ],
+              if (r.data.embeddingError != null) ...[
+                const SizedBox(width: 6),
+                Pill(label: '⚠ 관련 기사 검색 제외'),
               ],
               const Spacer(),
               Text(
@@ -377,12 +501,112 @@ class _ArchiveCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(summary, style: const TextStyle(color: AppColors.slate200, height: 1.4)),
         ],
+        if (relatedArticles != null && relatedArticles!.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          const Text(
+            '관련 기사',
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.slate400),
+          ),
+          const SizedBox(height: 6),
+          SizedBox(
+            height: 150,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: relatedArticles!.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 12),
+              itemBuilder: (context, idx) {
+                final rel = relatedArticles![idx];
+                final relSummary = rel.data.firstSummary;
+                return InkWell(
+                  onTap: () => onShowRelatedFullText(rel),
+                  child: Container(
+                    width: 180,
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.slate800.withAlpha(180),
+                      border: Border.all(color: AppColors.slate700),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (rel.data.thumbnail != null)
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: Image.network(
+                              rel.data.thumbnail!,
+                              height: 60,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, _, _) => Container(height: 60, color: AppColors.slate700),
+                            ),
+                          )
+                        else
+                          Container(
+                            height: 60,
+                            decoration: BoxDecoration(
+                              color: AppColors.slate700,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                        const SizedBox(height: 6),
+                        Text(
+                          rel.data.title ?? rel.url,
+                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.slate100),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        if (relSummary != null) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            relSummary,
+                            style: const TextStyle(fontSize: 10, color: AppColors.slate400),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+        if (r.data.error != null) ...[
+          const SizedBox(height: 8),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: AppColors.red950.withValues(alpha: 0.4),
+              border: Border.all(color: AppColors.red900),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              r.data.error!,
+              style: const TextStyle(color: AppColors.red400, fontSize: 13),
+            ),
+          ),
+        ],
         const SizedBox(height: 8),
         Wrap(
           alignment: WrapAlignment.end,
           spacing: 8,
           runSpacing: 8,
           children: [
+            if (r.data.original != null && !r.data.processing)
+              ElevatedButton(
+                onPressed: onRegenerate,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.slate800,
+                  foregroundColor: AppColors.indigo400,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  minimumSize: Size.zero,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                child: const Text('Regenerate', style: TextStyle(fontSize: 12)),
+              ),
             if (r.data.original != null)
               ElevatedButton(
                 onPressed: onChatWithArticle,
@@ -408,7 +632,7 @@ class _ArchiveCard extends StatelessWidget {
                 child: const Text('View full text', style: TextStyle(fontSize: 12)),
               ),
             ElevatedButton(
-              onPressed: () {},
+              onPressed: onViewOnWeb,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.slate800,
                 foregroundColor: AppColors.slate200,
@@ -419,12 +643,23 @@ class _ArchiveCard extends StatelessWidget {
               child: const Text('View on web', style: TextStyle(fontSize: 12)),
             ),
             TextButton(
-              onPressed: () {},
+              onPressed: onDelete,
               child: const Text('Delete', style: TextStyle(color: AppColors.red400, fontSize: 12)),
             ),
           ],
         ),
       ],
     );
+
+    if (isRegenerating) {
+      return IgnorePointer(
+        ignoring: true,
+        child: Opacity(
+          opacity: 0.5,
+          child: expandedContent,
+        ),
+      );
+    }
+    return expandedContent;
   }
 }
