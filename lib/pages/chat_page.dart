@@ -290,11 +290,11 @@ class _ChatPageState extends State<ChatPage> {
           final summary = summaryMap[id];
           return ListTile(
             onTap: () => _openSession(id),
-            leading: article.data.thumbnail != null
+            leading: article.data.firstImage != null
                 ? ClipRRect(
                     borderRadius: BorderRadius.circular(8),
                     child: Image.network(
-                      article.data.thumbnail!,
+                      article.data.firstImage!,
                       height: 44,
                       width: 44,
                       fit: BoxFit.cover,

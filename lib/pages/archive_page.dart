@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../models/content_record.dart';
+import '../pages/archive_detail_page.dart';
 import '../services/content_repository.dart';
 import '../services/pipeline_settings_store.dart';
 import '../services/supabase_config.dart';
 import '../theme/app_colors.dart';
 import '../widgets/content_card.dart';
-import '../widgets/full_text_dialog.dart';
 
 class ArchivePage extends StatefulWidget {
   final ValueChanged<int> onChatWithArticle;
@@ -26,8 +25,6 @@ class _ArchivePageState extends State<ArchivePage> {
   final _searchController = TextEditingController();
   String _search = '';
   final Set<String> _categoryFilter = {};
-  final Set<int> _expanded = {};
-  final Map<int, List<ContentRecord>> _relatedMap = {};
   String _backendUrl = kDefaultBackendUrl;
   PipelineSettings _pipelineSettings = const PipelineSettings();
 
@@ -69,30 +66,6 @@ class _ArchivePageState extends State<ArchivePage> {
     }
   }
 
-  void _toggleExpanded(int id) {
-    setState(() {
-      if (_expanded.contains(id)) {
-        _expanded.remove(id);
-      } else {
-        _expanded.add(id);
-        _fetchRelatedIfNeeded(id);
-      }
-    });
-  }
-
-  Future<void> _fetchRelatedIfNeeded(int id) async {
-    if (_relatedMap.containsKey(id)) return;
-    try {
-      final related = await _repo.getRelated(id);
-      if (!mounted) return;
-      setState(() {
-        _relatedMap[id] = related;
-      });
-    } catch (_) {
-      // Ignore errors fetching related articles gracefully
-    }
-  }
-
   void _toggleCategory(String category) {
     setState(() {
       if (_categoryFilter.contains(category)) {
@@ -101,46 +74,6 @@ class _ArchivePageState extends State<ArchivePage> {
         _categoryFilter.add(category);
       }
     });
-  }
-
-  Future<void> _handleDelete(int id) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.slate900,
-        title: const Text(
-          'Delete this item?',
-          style: TextStyle(color: AppColors.slate100),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text(
-              'Cancel',
-              style: TextStyle(color: AppColors.slate400),
-            ),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text(
-              'Delete',
-              style: TextStyle(color: AppColors.red400),
-            ),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true) return;
-
-    try {
-      await _repo.discard(id);
-      await _refresh();
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Delete failed: $e')));
-    }
   }
 
   Future<void> _handleViewOnWeb(String url) async {
@@ -159,22 +92,18 @@ class _ArchivePageState extends State<ArchivePage> {
     }
   }
 
-  Future<void> _handleRegenerate(int id) async {
-    try {
-      await _repo.regenerateSummary(
-        id,
-        _backendUrl,
-        settings: _pipelineSettings,
-        onProcessingStarted: _refresh,
-      );
-      await _refresh();
-    } catch (e) {
-      await _refresh();
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Regeneration failed: $e')));
-    }
+  Future<void> _openDetail(ContentRecord record) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => ArchiveDetailPage(
+          record: record,
+          backendUrl: _backendUrl,
+          pipelineSettings: _pipelineSettings,
+          onChatWithArticle: widget.onChatWithArticle,
+        ),
+      ),
+    );
+    await _refresh();
   }
 
   @override
@@ -307,16 +236,8 @@ class _ArchivePageState extends State<ArchivePage> {
             for (final r in groups[folder]!) ...[
               _ArchiveCard(
                 record: r,
-                isExpanded: _expanded.contains(r.id),
-                onToggleExpanded: () => _toggleExpanded(r.id),
-                onShowFullText: () => showFullTextDialog(context, r),
-                onChatWithArticle: () => widget.onChatWithArticle(r.id),
-                onDelete: () => _handleDelete(r.id),
+                onTap: () => _openDetail(r),
                 onViewOnWeb: () => _handleViewOnWeb(r.url),
-                onRegenerate: () => _handleRegenerate(r.id),
-                relatedArticles: _relatedMap[r.id],
-                onShowRelatedFullText: (related) =>
-                    showFullTextDialog(context, related),
               ),
               const SizedBox(height: 16),
             ],
@@ -330,448 +251,101 @@ class _ArchivePageState extends State<ArchivePage> {
 
 class _ArchiveCard extends StatelessWidget {
   final ContentRecord record;
-  final bool isExpanded;
-  final VoidCallback onToggleExpanded;
-  final VoidCallback onShowFullText;
-  final VoidCallback onChatWithArticle;
-  final VoidCallback onDelete;
+  final VoidCallback onTap;
   final VoidCallback onViewOnWeb;
-  final VoidCallback onRegenerate;
-  final List<ContentRecord>? relatedArticles;
-  final Function(ContentRecord) onShowRelatedFullText;
 
   const _ArchiveCard({
     required this.record,
-    required this.isExpanded,
-    required this.onToggleExpanded,
-    required this.onShowFullText,
-    required this.onChatWithArticle,
-    required this.onDelete,
+    required this.onTap,
     required this.onViewOnWeb,
-    required this.onRegenerate,
-    required this.relatedArticles,
-    required this.onShowRelatedFullText,
   });
 
   @override
   Widget build(BuildContext context) {
     final r = record;
     final summary = r.data.firstSummary;
+    final images = r.data.images;
 
-    if (!isExpanded) {
-      final collapsedContent = ContentCard(
-        padding: const EdgeInsets.all(8),
-        onTap: r.data.processing ? null : onToggleExpanded,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (r.data.thumbnail != null)
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.network(
-                    r.data.thumbnail!,
-                    height: 64,
-                    width: 64,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => Container(
-                      height: 64,
-                      width: 64,
-                      color: AppColors.slate800,
-                    ),
-                  ),
-                )
-              else
-                Container(
-                  height: 64,
-                  width: 64,
-                  decoration: BoxDecoration(
-                    color: AppColors.slate800,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 4,
-                      children: [
-                        if (r.data.processing)
-                          Pill(label: '🔄 ${r.data.stage ?? "Processing..."}')
-                        else
-                          TagBadge(tag: r.tag),
-                        if (r.data.category != null)
-                          Pill(label: r.data.category!),
-                      ],
-                    ),
-                    if (r.data.title != null) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        r.data.title!,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.slate100,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                    if (summary != null) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        summary,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: AppColors.slate400,
-                        ),
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              const Text(
-                '▸',
-                style: TextStyle(color: AppColors.slate600, fontSize: 12),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              if (r.data.original != null)
-                TextButton(
-                  onPressed: onChatWithArticle,
-                  style: TextButton.styleFrom(
-                    backgroundColor: AppColors.indigo600,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    minimumSize: Size.zero,
-                  ),
-                  child: const Text(
-                    'Chat with this article',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              if (r.data.original != null)
-                TextButton(
-                  onPressed: onShowFullText,
-                  style: TextButton.styleFrom(
-                    backgroundColor: AppColors.slate800,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    minimumSize: Size.zero,
-                  ),
-                  child: const Text(
-                    'View full text',
-                    style: TextStyle(
-                      color: AppColors.slate200,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              TextButton(
-                onPressed: onViewOnWeb,
-                style: TextButton.styleFrom(
-                  backgroundColor: AppColors.slate800,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
-                  ),
-                  minimumSize: Size.zero,
-                ),
-                child: const Text(
-                  'View on web',
-                  style: TextStyle(
-                    color: AppColors.slate200,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      );
-
-      if (r.data.processing) {
-        return Stack(
-          alignment: Alignment.center,
-          children: [
-            IgnorePointer(
-              ignoring: true,
-              child: Opacity(opacity: 0.5, child: collapsedContent),
-            ),
-            const CircularProgressIndicator(color: AppColors.indigo500),
-          ],
-        );
-      }
-      return collapsedContent;
-    }
-
-    final expandedContent = ContentCard(
+    final content = ContentCard(
+      padding: const EdgeInsets.all(8),
+      onTap: r.data.processing ? null : onTap,
       children: [
-        InkWell(
-          onTap: onToggleExpanded,
-          child: Row(
-            children: [
-              const Text(
-                '▾',
-                style: TextStyle(color: AppColors.slate600, fontSize: 12),
-              ),
-              const SizedBox(width: 8),
-              if (r.data.processing)
-                Pill(label: '🔄 ${r.data.stage ?? "Processing..."}')
-              else
-                TagBadge(tag: r.tag),
-              if (r.data.category != null) ...[
-                const SizedBox(width: 6),
-                Pill(label: r.data.category!),
-              ],
-              if (r.data.embeddingError != null) ...[
-                const SizedBox(width: 6),
-                Pill(label: '⚠ 관련 기사 검색 제외'),
-              ],
-              const Spacer(),
-              Text(
-                DateFormat('MM/dd/yyyy, h:mm a').format(r.createdAt.toLocal()),
-                style: const TextStyle(fontSize: 11, color: AppColors.slate600),
-              ),
-            ],
-          ),
-        ),
-        if (r.data.title != null) ...[
-          const SizedBox(height: 8),
-          Text(
-            r.data.title!,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: AppColors.slate100,
-            ),
-          ),
-        ],
-        if (r.data.thumbnail != null) ...[
-          const SizedBox(height: 8),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Image.network(
-              r.data.thumbnail!,
-              height: 200,
-              width: double.infinity,
-              fit: BoxFit.cover,
-              errorBuilder: (_, _, _) => const SizedBox.shrink(),
-            ),
-          ),
-        ],
-        if (summary != null) ...[
-          const SizedBox(height: 8),
-          Text(
-            summary,
-            style: const TextStyle(color: AppColors.slate200, height: 1.4),
-          ),
-        ],
-        if (relatedArticles != null && relatedArticles!.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          const Text(
-            '관련 기사',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: AppColors.slate400,
-            ),
-          ),
-          const SizedBox(height: 6),
-          SizedBox(
-            height: 150,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: relatedArticles!.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 12),
-              itemBuilder: (context, idx) {
-                final rel = relatedArticles![idx];
-                final relSummary = rel.data.firstSummary;
-                return InkWell(
-                  onTap: () => onShowRelatedFullText(rel),
-                  child: Container(
-                    width: 180,
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColors.slate800.withAlpha(180),
-                      border: Border.all(color: AppColors.slate700),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (rel.data.thumbnail != null)
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(4),
-                            child: Image.network(
-                              rel.data.thumbnail!,
-                              height: 60,
-                              width: double.infinity,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, _, _) => Container(
-                                height: 60,
-                                color: AppColors.slate700,
-                              ),
-                            ),
-                          )
-                        else
-                          Container(
-                            height: 60,
-                            decoration: BoxDecoration(
-                              color: AppColors.slate700,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                          ),
-                        const SizedBox(height: 6),
-                        Text(
-                          rel.data.title ?? rel.url,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.slate100,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        if (relSummary != null) ...[
-                          const SizedBox(height: 4),
-                          Text(
-                            relSummary,
-                            style: const TextStyle(
-                              fontSize: 10,
-                              color: AppColors.slate400,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
-        if (r.data.error != null) ...[
-          const SizedBox(height: 8),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: AppColors.red950.withValues(alpha: 0.4),
-              border: Border.all(color: AppColors.red900),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              r.data.error!,
-              style: const TextStyle(color: AppColors.red400, fontSize: 13),
-            ),
-          ),
-        ],
-        const SizedBox(height: 8),
-        Wrap(
-          alignment: WrapAlignment.end,
-          spacing: 8,
-          runSpacing: 8,
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (r.data.original != null && !r.data.processing)
-              ElevatedButton(
-                onPressed: onRegenerate,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.slate800,
-                  foregroundColor: AppColors.indigo400,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
+            _ArchiveThumbnail(images: images),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    children: [
+                      if (r.data.processing)
+                        Pill(label: '🔄 ${r.data.stage ?? "Processing..."}')
+                      else
+                        TagBadge(tag: r.tag),
+                      if (r.data.category != null)
+                        Pill(label: r.data.category!),
+                    ],
                   ),
-                  minimumSize: Size.zero,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: const Text('Regenerate', style: TextStyle(fontSize: 12)),
+                  if (r.data.title != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      r.data.title!,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.slate100,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                  if (summary != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      summary,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.slate400,
+                      ),
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ],
               ),
-            if (r.data.original != null)
-              ElevatedButton(
-                onPressed: onChatWithArticle,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.indigo600,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  minimumSize: Size.zero,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: const Text(
-                  'Chat with this article',
-                  style: TextStyle(fontSize: 12),
-                ),
-              ),
-            if (r.data.original != null)
-              ElevatedButton(
-                onPressed: onShowFullText,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.slate800,
-                  foregroundColor: AppColors.slate200,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  minimumSize: Size.zero,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: const Text(
-                  'View full text',
-                  style: TextStyle(fontSize: 12),
-                ),
-              ),
-            ElevatedButton(
+            ),
+            const Text(
+              '▸',
+              style: TextStyle(color: AppColors.slate600, fontSize: 12),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            TextButton(
               onPressed: onViewOnWeb,
-              style: ElevatedButton.styleFrom(
+              style: TextButton.styleFrom(
                 backgroundColor: AppColors.slate800,
-                foregroundColor: AppColors.slate200,
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
+                  horizontal: 10,
+                  vertical: 4,
                 ),
                 minimumSize: Size.zero,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
               ),
-              child: const Text('View on web', style: TextStyle(fontSize: 12)),
-            ),
-            TextButton(
-              onPressed: onDelete,
               child: const Text(
-                'Delete',
-                style: TextStyle(color: AppColors.red400, fontSize: 12),
+                'View on web',
+                style: TextStyle(
+                  color: AppColors.slate200,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ),
           ],
@@ -785,12 +359,86 @@ class _ArchiveCard extends StatelessWidget {
         children: [
           IgnorePointer(
             ignoring: true,
-            child: Opacity(opacity: 0.5, child: expandedContent),
+            child: Opacity(opacity: 0.5, child: content),
           ),
           const CircularProgressIndicator(color: AppColors.indigo500),
         ],
       );
     }
-    return expandedContent;
+    return content;
+  }
+}
+
+/// Renders the collapsed-card thumbnail. When there's more than one image,
+/// adds two rotated cards behind the main image to hint at a stack, mirroring
+/// article-sum's Archive.tsx multi-image treatment.
+class _ArchiveThumbnail extends StatelessWidget {
+  final List<String>? images;
+
+  const _ArchiveThumbnail({required this.images});
+
+  @override
+  Widget build(BuildContext context) {
+    const size = 64.0;
+    if (images == null || images!.isEmpty) {
+      return Container(
+        height: size,
+        width: size,
+        decoration: BoxDecoration(
+          color: AppColors.slate800,
+          borderRadius: BorderRadius.circular(8),
+        ),
+      );
+    }
+
+    return SizedBox(
+      height: size,
+      width: size,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          if (images!.length > 1) ...[
+            Transform.rotate(
+              angle: 0.35,
+              child: Container(
+                height: size,
+                width: size,
+                decoration: BoxDecoration(
+                  color: AppColors.slate800,
+                  border: Border.all(color: AppColors.slate700),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+            Transform.rotate(
+              angle: 0.17,
+              child: Container(
+                height: size,
+                width: size,
+                decoration: BoxDecoration(
+                  color: AppColors.slate800,
+                  border: Border.all(color: AppColors.slate700),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+          ],
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.network(
+              images!.first,
+              height: size,
+              width: size,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => Container(
+                height: size,
+                width: size,
+                color: AppColors.slate800,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

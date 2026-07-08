@@ -5,7 +5,7 @@ class ContentData {
   final Map<String, String>? summaries;
   final bool processing;
   final String? stage;
-  final String? thumbnail;
+  final List<String>? images;
   final String? error;
   final String? folder;
   final String? embeddingError;
@@ -17,7 +17,7 @@ class ContentData {
     this.summaries,
     this.processing = false,
     this.stage,
-    this.thumbnail,
+    this.images,
     this.error,
     this.folder,
     this.embeddingError,
@@ -25,6 +25,7 @@ class ContentData {
 
   factory ContentData.fromJson(Map<String, dynamic> json) {
     final rawSummaries = json['summaries'];
+    final rawImages = json['images'];
     return ContentData(
       original: json['original'] as String?,
       title: json['title'] as String?,
@@ -34,7 +35,9 @@ class ContentData {
           : null,
       processing: json['processing'] as bool? ?? false,
       stage: json['stage'] as String?,
-      thumbnail: json['thumbnail'] as String?,
+      images: rawImages is List
+          ? rawImages.map((e) => e.toString()).toList()
+          : null,
       error: json['error'] as String?,
       folder: json['folder'] as String?,
       embeddingError: json['embeddingError'] as String?,
@@ -49,7 +52,7 @@ class ContentData {
       'summaries': summaries,
       'processing': processing,
       'stage': stage,
-      'thumbnail': thumbnail,
+      'images': images,
       'error': error,
       'folder': folder,
       'embeddingError': embeddingError,
@@ -58,6 +61,9 @@ class ContentData {
 
   String? get firstSummary =>
       (summaries != null && summaries!.isNotEmpty) ? summaries!.values.first : null;
+
+  String? get firstImage =>
+      (images != null && images!.isNotEmpty) ? images!.first : null;
 }
 
 class ContentRecord {

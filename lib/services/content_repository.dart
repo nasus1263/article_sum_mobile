@@ -183,7 +183,7 @@ class ContentRepository {
         tag = 'Not Article';
       } else {
         data['original'] = result['text'];
-        data['thumbnail'] = result['image'];
+        data['images'] = result['images'] ?? [];
         data['title'] = result['title'];
         data['summaries'] = <String, dynamic>{};
         if (result['error'] != null) {
