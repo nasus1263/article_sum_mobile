@@ -1,0 +1,74 @@
+class ContentData {
+  final String? original;
+  final String? title;
+  final String? category;
+  final Map<String, String>? summaries;
+  final bool processing;
+  final String? stage;
+  final String? thumbnail;
+  final String? error;
+  final String? folder;
+
+  const ContentData({
+    this.original,
+    this.title,
+    this.category,
+    this.summaries,
+    this.processing = false,
+    this.stage,
+    this.thumbnail,
+    this.error,
+    this.folder,
+  });
+
+  factory ContentData.fromJson(Map<String, dynamic> json) {
+    final rawSummaries = json['summaries'];
+    return ContentData(
+      original: json['original'] as String?,
+      title: json['title'] as String?,
+      category: json['category'] as String?,
+      summaries: rawSummaries is Map
+          ? rawSummaries.map((k, v) => MapEntry(k.toString(), v.toString()))
+          : null,
+      processing: json['processing'] as bool? ?? false,
+      stage: json['stage'] as String?,
+      thumbnail: json['thumbnail'] as String?,
+      error: json['error'] as String?,
+      folder: json['folder'] as String?,
+    );
+  }
+
+  String? get firstSummary =>
+      (summaries != null && summaries!.isNotEmpty) ? summaries!.values.first : null;
+}
+
+class ContentRecord {
+  final int id;
+  final String url;
+  final String tag;
+  final String status;
+  final ContentData data;
+  final DateTime createdAt;
+
+  const ContentRecord({
+    required this.id,
+    required this.url,
+    required this.tag,
+    required this.status,
+    required this.data,
+    required this.createdAt,
+  });
+
+  factory ContentRecord.fromJson(Map<String, dynamic> json) {
+    return ContentRecord(
+      id: json['id'] as int,
+      url: json['url'] as String,
+      tag: json['tag'] as String,
+      status: json['status'] as String,
+      data: ContentData.fromJson(
+        (json['data'] as Map?)?.cast<String, dynamic>() ?? {},
+      ),
+      createdAt: DateTime.parse(json['created_at'] as String),
+    );
+  }
+}
