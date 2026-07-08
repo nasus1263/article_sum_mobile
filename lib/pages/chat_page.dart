@@ -2,15 +2,15 @@ import 'package:flutter/material.dart';
 
 import '../models/chat_models.dart';
 import '../models/content_record.dart';
-import '../services/chat_config.dart';
 import '../services/chat_store.dart';
 import '../services/content_repository.dart';
 import '../services/llm_client.dart' as llm;
+import '../services/supabase_config.dart';
 import '../theme/app_colors.dart';
 
-/// Chat is a real, locally-driven feature: it talks straight to the
-/// provider APIs from the device (like Archive/Pending talk straight to
-/// Supabase) and keeps session history on-device — no backend server.
+/// Chat streams replies from the backend's /chat endpoint (SSE), mirroring
+/// Archive/Pending's use of the backend for summarization. Session history
+/// is kept on-device.
 class ChatPage extends StatefulWidget {
   final int? initialContentId;
   final int initialRequestSeq;
@@ -34,13 +34,21 @@ class _ChatPageState extends State<ChatPage> {
   bool _sending = false;
   String? _error;
   String _provider = 'claude';
+  String _backendUrl = 'http://127.0.0.1:3000';
 
   @override
   void initState() {
     super.initState();
+    _loadSettings();
     _loadArticles();
     _refreshSessionList();
     if (widget.initialContentId != null) _openSession(widget.initialContentId!);
+  }
+
+  Future<void> _loadSettings() async {
+    final config = await SupabaseConfigStore.load();
+    if (!mounted) return;
+    setState(() => _backendUrl = config.cleanBackendUrl);
   }
 
   @override
@@ -142,14 +150,10 @@ class _ChatPageState extends State<ChatPage> {
     _refreshSessionList();
 
     try {
-      final apiKeys = await ChatConfigStore.loadApiKeys();
-      final models = await ChatConfigStore.loadModels();
       final reply = await llm.streamChat(
-        provider: _provider,
+        backendUrl: _backendUrl,
         articleText: article.data.original ?? '',
         history: _session!.messages,
-        model: models[_provider]!,
-        apiKeys: apiKeys,
         onChunk: (chunk) {
           if (!mounted) return;
           setState(() => _streamingText += chunk);

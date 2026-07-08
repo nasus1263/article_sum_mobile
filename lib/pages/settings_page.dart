@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../constants/pipeline_defaults.dart';
-import '../services/chat_config.dart';
 import '../services/supabase_config.dart';
 import '../theme/app_colors.dart';
 import '../widgets/content_card.dart';
@@ -21,16 +20,8 @@ class _SettingsPageState extends State<SettingsPage> {
   final bool _emoji = true;
   final bool _kidFriendly = false;
   final String _language = 'ko';
-  final String _provider = 'claude';
   final List<String> _categories = List.of(kDefaultCategories);
   final _newCategoryController = TextEditingController();
-
-  final Map<String, TextEditingController> _apiKeyControllers = {
-    for (final p in kProviders) p.id: TextEditingController(),
-  };
-  final Map<String, TextEditingController> _modelControllers = {
-    for (final p in kProviders) p.id: TextEditingController(),
-  };
 
   @override
   void initState() {
@@ -40,14 +31,8 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _loadConfig() async {
     final config = await SupabaseConfigStore.load();
-    final apiKeys = await ChatConfigStore.loadApiKeys();
-    final models = await ChatConfigStore.loadModels();
     if (!mounted) return;
     _backendUrlController.text = config.backendUrl;
-    for (final p in kProviders) {
-      _apiKeyControllers[p.id]!.text = apiKeys[p.id] ?? '';
-      _modelControllers[p.id]!.text = models[p.id] ?? kDefaultModels[p.id]!;
-    }
     setState(() => _loaded = true);
   }
 
@@ -58,28 +43,10 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  Future<void> _saveApiKeys() async {
-    await ChatConfigStore.saveApiKeys({
-      for (final p in kProviders) p.id: _apiKeyControllers[p.id]!.text,
-    });
-  }
-
-  Future<void> _saveModels() async {
-    await ChatConfigStore.saveModels({
-      for (final p in kProviders) p.id: _modelControllers[p.id]!.text,
-    });
-  }
-
   @override
   void dispose() {
     _backendUrlController.dispose();
     _newCategoryController.dispose();
-    for (final c in _apiKeyControllers.values) {
-      c.dispose();
-    }
-    for (final c in _modelControllers.values) {
-      c.dispose();
-    }
     super.dispose();
   }
 
@@ -156,23 +123,6 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                const Text('Provider', style: TextStyle(color: AppColors.slate300, fontSize: 13)),
-                const Spacer(),
-                DropdownButton<String>(
-                  value: _provider,
-                  dropdownColor: AppColors.slate900,
-                  style: const TextStyle(color: AppColors.slate100, fontSize: 13),
-                  underline: const SizedBox.shrink(),
-                  items: kProviders
-                      .map((p) => DropdownMenuItem(value: p.id, child: Text(p.label)))
-                      .toList(),
-                  onChanged: (_) {},
-                ),
-              ],
-            ),
           ],
         ),
 
@@ -241,35 +191,6 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
           ],
         ),
-
-        const SizedBox(height: 24),
-        for (final p in kProviders) ...[
-          ContentCard(
-            children: [
-              Text(p.label, style: const TextStyle(color: AppColors.slate300, fontSize: 13, fontWeight: FontWeight.w500)),
-              const SizedBox(height: 10),
-              const Text('API Key', style: TextStyle(color: AppColors.slate500, fontSize: 12)),
-              const SizedBox(height: 6),
-              TextField(
-                controller: _apiKeyControllers[p.id],
-                obscureText: true,
-                onChanged: (_) => _saveApiKeys(),
-                style: const TextStyle(color: AppColors.slate100, fontSize: 13),
-                decoration: _fieldDecoration(hint: '${p.label} API Key'),
-              ),
-              const SizedBox(height: 12),
-              const Text('Model name', style: TextStyle(color: AppColors.slate500, fontSize: 12)),
-              const SizedBox(height: 6),
-              TextField(
-                controller: _modelControllers[p.id],
-                onChanged: (_) => _saveModels(),
-                style: const TextStyle(color: AppColors.slate100, fontSize: 13),
-                decoration: _fieldDecoration(),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-        ],
       ],
     );
   }
