@@ -121,7 +121,7 @@ class _PendingPageState extends State<PendingPage> {
   Future<void> _handleRegenerate(int id) async {
     try {
       // Run in background and update database state
-      await _repo.regenerateSummary(id, _backendUrl);
+      await _repo.regenerateSummary(id, _backendUrl, onProcessingStarted: _refresh);
       await _refresh();
     } catch (e) {
       await _refresh(); // Refresh to show error on the card

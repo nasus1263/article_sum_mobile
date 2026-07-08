@@ -48,7 +48,11 @@ class ContentRepository {
         .toList();
   }
 
-  Future<void> regenerateSummary(int id, String backendUrl) async {
+  Future<void> regenerateSummary(
+    int id,
+    String backendUrl, {
+    Future<void> Function()? onProcessingStarted,
+  }) async {
     final client = await SupabaseClientProvider.getClient();
     final response = await client
         .from('contents')
@@ -56,16 +60,17 @@ class ContentRepository {
         .eq('id', id)
         .single();
     final record = ContentRecord.fromJson(response);
-    
+
     if (record.data.original == null) {
       throw Exception('Original article text is missing. Cannot regenerate.');
     }
-    
+
     final data = Map<String, dynamic>.from(record.data.toJson());
     data['processing'] = true;
     data['stage'] = 'Regenerating summary...';
     await client.from('contents').update({'data': data}).eq('id', id);
-    
+    await onProcessingStarted?.call();
+
     try {
       final res = await http.post(
         Uri.parse('$backendUrl/summarize'),

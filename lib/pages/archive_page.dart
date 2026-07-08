@@ -148,7 +148,7 @@ class _ArchivePageState extends State<ArchivePage> {
 
   Future<void> _handleRegenerate(int id) async {
     try {
-      await _repo.regenerateSummary(id, _backendUrl);
+      await _repo.regenerateSummary(id, _backendUrl, onProcessingStarted: _refresh);
       await _refresh();
     } catch (e) {
       await _refresh();
