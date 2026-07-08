@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../models/content_record.dart';
 import '../services/content_repository.dart';
+import '../services/pipeline_settings_store.dart';
 import '../services/supabase_config.dart';
 import '../theme/app_colors.dart';
 import '../widgets/content_card.dart';
@@ -28,6 +29,7 @@ class _ArchivePageState extends State<ArchivePage> {
   final Set<int> _expanded = {};
   final Map<int, List<ContentRecord>> _relatedMap = {};
   String _backendUrl = 'http://127.0.0.1:3000';
+  PipelineSettings _pipelineSettings = const PipelineSettings();
 
   @override
   void initState() {
@@ -41,9 +43,11 @@ class _ArchivePageState extends State<ArchivePage> {
 
   Future<void> _loadSettings() async {
     final config = await SupabaseConfigStore.load();
+    final pipelineSettings = await PipelineSettingsStore.load();
     if (!mounted) return;
     setState(() {
       _backendUrl = config.cleanBackendUrl;
+      _pipelineSettings = pipelineSettings;
     });
   }
 
@@ -104,15 +108,24 @@ class _ArchivePageState extends State<ArchivePage> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.slate900,
-        title: const Text('Delete this item?', style: TextStyle(color: AppColors.slate100)),
+        title: const Text(
+          'Delete this item?',
+          style: TextStyle(color: AppColors.slate100),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.slate400)),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: AppColors.slate400),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Delete', style: TextStyle(color: AppColors.red400)),
+            child: const Text(
+              'Delete',
+              style: TextStyle(color: AppColors.red400),
+            ),
           ),
         ],
       ),
@@ -124,9 +137,9 @@ class _ArchivePageState extends State<ArchivePage> {
       await _refresh();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Delete failed: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Delete failed: $e')));
     }
   }
 
@@ -140,22 +153,27 @@ class _ArchivePageState extends State<ArchivePage> {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error opening link: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error opening link: $e')));
     }
   }
 
   Future<void> _handleRegenerate(int id) async {
     try {
-      await _repo.regenerateSummary(id, _backendUrl, onProcessingStarted: _refresh);
+      await _repo.regenerateSummary(
+        id,
+        _backendUrl,
+        settings: _pipelineSettings,
+        onProcessingStarted: _refresh,
+      );
       await _refresh();
     } catch (e) {
       await _refresh();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Regeneration failed: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Regeneration failed: $e')));
     }
   }
 
@@ -169,7 +187,10 @@ class _ArchivePageState extends State<ArchivePage> {
           children: [
             Padding(
               padding: const EdgeInsets.only(top: 32),
-              child: Text(_error!, style: const TextStyle(color: AppColors.slate400, fontSize: 13)),
+              child: Text(
+                _error!,
+                style: const TextStyle(color: AppColors.slate400, fontSize: 13),
+              ),
             ),
           ],
         ),
@@ -178,7 +199,9 @@ class _ArchivePageState extends State<ArchivePage> {
 
     final records = _records;
     if (records == null) {
-      return const Center(child: CircularProgressIndicator(color: AppColors.indigo500));
+      return const Center(
+        child: CircularProgressIndicator(color: AppColors.indigo500),
+      );
     }
 
     final categories = <String>{};
@@ -190,7 +213,8 @@ class _ArchivePageState extends State<ArchivePage> {
     final query = _search.trim().toLowerCase();
     final filtered = records.where((r) {
       if (_categoryFilter.isNotEmpty &&
-          !(r.data.category != null && _categoryFilter.contains(r.data.category))) {
+          !(r.data.category != null &&
+              _categoryFilter.contains(r.data.category))) {
         return false;
       }
       if (query.isEmpty) return true;
@@ -223,7 +247,10 @@ class _ArchivePageState extends State<ArchivePage> {
               hintStyle: TextStyle(color: AppColors.slate500),
               filled: true,
               fillColor: AppColors.slate900,
-              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 10,
+              ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.all(Radius.circular(8)),
                 borderSide: BorderSide(color: AppColors.slate700),
@@ -244,26 +271,37 @@ class _ArchivePageState extends State<ArchivePage> {
               spacing: 8,
               runSpacing: 8,
               children: sortedCategories
-                  .map((c) => Pill(
-                        label: c,
-                        active: _categoryFilter.contains(c),
-                        onTap: () => _toggleCategory(c),
-                      ))
+                  .map(
+                    (c) => Pill(
+                      label: c,
+                      active: _categoryFilter.contains(c),
+                      onTap: () => _toggleCategory(c),
+                    ),
+                  )
                   .toList(),
             ),
           ],
           const SizedBox(height: 24),
           if (records.isEmpty)
-            const Text('No archived items.', style: TextStyle(color: AppColors.slate500, fontSize: 13)),
+            const Text(
+              'No archived items.',
+              style: TextStyle(color: AppColors.slate500, fontSize: 13),
+            ),
           if (records.isNotEmpty && filtered.isEmpty)
-            const Text('No items match your search/filter.',
-                style: TextStyle(color: AppColors.slate500, fontSize: 13)),
+            const Text(
+              'No items match your search/filter.',
+              style: TextStyle(color: AppColors.slate500, fontSize: 13),
+            ),
           for (final folder in folders) ...[
             Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: Text(
                 folder,
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.slate400),
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.slate400,
+                ),
               ),
             ),
             for (final r in groups[folder]!) ...[
@@ -277,7 +315,8 @@ class _ArchivePageState extends State<ArchivePage> {
                 onViewOnWeb: () => _handleViewOnWeb(r.url),
                 onRegenerate: () => _handleRegenerate(r.id),
                 relatedArticles: _relatedMap[r.id],
-                onShowRelatedFullText: (related) => showFullTextDialog(context, related),
+                onShowRelatedFullText: (related) =>
+                    showFullTextDialog(context, related),
               ),
               const SizedBox(height: 16),
             ],
@@ -364,7 +403,8 @@ class _ArchiveCard extends StatelessWidget {
                           Pill(label: '🔄 ${r.data.stage ?? "Processing..."}')
                         else
                           TagBadge(tag: r.tag),
-                        if (r.data.category != null) Pill(label: r.data.category!),
+                        if (r.data.category != null)
+                          Pill(label: r.data.category!),
                       ],
                     ),
                     if (r.data.title != null) ...[
@@ -384,7 +424,10 @@ class _ArchiveCard extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(
                         summary,
-                        style: const TextStyle(fontSize: 12, color: AppColors.slate400),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.slate400,
+                        ),
                         maxLines: 3,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -392,7 +435,10 @@ class _ArchiveCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const Text('▸', style: TextStyle(color: AppColors.slate600, fontSize: 12)),
+              const Text(
+                '▸',
+                style: TextStyle(color: AppColors.slate600, fontSize: 12),
+              ),
             ],
           ),
           const SizedBox(height: 4),
@@ -404,32 +450,59 @@ class _ArchiveCard extends StatelessWidget {
                   onPressed: onChatWithArticle,
                   style: TextButton.styleFrom(
                     backgroundColor: AppColors.indigo600,
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     minimumSize: Size.zero,
                   ),
-                  child: const Text('Chat with this article',
-                      style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w500)),
+                  child: const Text(
+                    'Chat with this article',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                 ),
               if (r.data.original != null)
                 TextButton(
                   onPressed: onShowFullText,
                   style: TextButton.styleFrom(
                     backgroundColor: AppColors.slate800,
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     minimumSize: Size.zero,
                   ),
-                  child: const Text('View full text',
-                      style: TextStyle(color: AppColors.slate200, fontSize: 11, fontWeight: FontWeight.w500)),
+                  child: const Text(
+                    'View full text',
+                    style: TextStyle(
+                      color: AppColors.slate200,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                 ),
               TextButton(
                 onPressed: onViewOnWeb,
                 style: TextButton.styleFrom(
                   backgroundColor: AppColors.slate800,
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   minimumSize: Size.zero,
                 ),
-                child: const Text('View on web',
-                    style: TextStyle(color: AppColors.slate200, fontSize: 11, fontWeight: FontWeight.w500)),
+                child: const Text(
+                  'View on web',
+                  style: TextStyle(
+                    color: AppColors.slate200,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
               ),
             ],
           ),
@@ -442,14 +515,9 @@ class _ArchiveCard extends StatelessWidget {
           children: [
             IgnorePointer(
               ignoring: true,
-              child: Opacity(
-                opacity: 0.5,
-                child: collapsedContent,
-              ),
+              child: Opacity(opacity: 0.5, child: collapsedContent),
             ),
-            const CircularProgressIndicator(
-              color: AppColors.indigo500,
-            ),
+            const CircularProgressIndicator(color: AppColors.indigo500),
           ],
         );
       }
@@ -462,7 +530,10 @@ class _ArchiveCard extends StatelessWidget {
           onTap: onToggleExpanded,
           child: Row(
             children: [
-              const Text('▾', style: TextStyle(color: AppColors.slate600, fontSize: 12)),
+              const Text(
+                '▾',
+                style: TextStyle(color: AppColors.slate600, fontSize: 12),
+              ),
               const SizedBox(width: 8),
               if (r.data.processing)
                 Pill(label: '🔄 ${r.data.stage ?? "Processing..."}')
@@ -488,7 +559,11 @@ class _ArchiveCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             r.data.title!,
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.slate100),
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: AppColors.slate100,
+            ),
           ),
         ],
         if (r.data.thumbnail != null) ...[
@@ -506,13 +581,20 @@ class _ArchiveCard extends StatelessWidget {
         ],
         if (summary != null) ...[
           const SizedBox(height: 8),
-          Text(summary, style: const TextStyle(color: AppColors.slate200, height: 1.4)),
+          Text(
+            summary,
+            style: const TextStyle(color: AppColors.slate200, height: 1.4),
+          ),
         ],
         if (relatedArticles != null && relatedArticles!.isNotEmpty) ...[
           const SizedBox(height: 12),
           const Text(
             '관련 기사',
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.slate400),
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: AppColors.slate400,
+            ),
           ),
           const SizedBox(height: 6),
           SizedBox(
@@ -545,7 +627,10 @@ class _ArchiveCard extends StatelessWidget {
                               height: 60,
                               width: double.infinity,
                               fit: BoxFit.cover,
-                              errorBuilder: (_, _, _) => Container(height: 60, color: AppColors.slate700),
+                              errorBuilder: (_, _, _) => Container(
+                                height: 60,
+                                color: AppColors.slate700,
+                              ),
                             ),
                           )
                         else
@@ -559,7 +644,11 @@ class _ArchiveCard extends StatelessWidget {
                         const SizedBox(height: 6),
                         Text(
                           rel.data.title ?? rel.url,
-                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.slate100),
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.slate100,
+                          ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -567,7 +656,10 @@ class _ArchiveCard extends StatelessWidget {
                           const SizedBox(height: 4),
                           Text(
                             relSummary,
-                            style: const TextStyle(fontSize: 10, color: AppColors.slate400),
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: AppColors.slate400,
+                            ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -608,9 +700,14 @@ class _ArchiveCard extends StatelessWidget {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.slate800,
                   foregroundColor: AppColors.indigo400,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   minimumSize: Size.zero,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
                 child: const Text('Regenerate', style: TextStyle(fontSize: 12)),
               ),
@@ -620,11 +717,19 @@ class _ArchiveCard extends StatelessWidget {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.indigo600,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   minimumSize: Size.zero,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
-                child: const Text('Chat with this article', style: TextStyle(fontSize: 12)),
+                child: const Text(
+                  'Chat with this article',
+                  style: TextStyle(fontSize: 12),
+                ),
               ),
             if (r.data.original != null)
               ElevatedButton(
@@ -632,26 +737,42 @@ class _ArchiveCard extends StatelessWidget {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.slate800,
                   foregroundColor: AppColors.slate200,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   minimumSize: Size.zero,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
-                child: const Text('View full text', style: TextStyle(fontSize: 12)),
+                child: const Text(
+                  'View full text',
+                  style: TextStyle(fontSize: 12),
+                ),
               ),
             ElevatedButton(
               onPressed: onViewOnWeb,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.slate800,
                 foregroundColor: AppColors.slate200,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 minimumSize: Size.zero,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
               child: const Text('View on web', style: TextStyle(fontSize: 12)),
             ),
             TextButton(
               onPressed: onDelete,
-              child: const Text('Delete', style: TextStyle(color: AppColors.red400, fontSize: 12)),
+              child: const Text(
+                'Delete',
+                style: TextStyle(color: AppColors.red400, fontSize: 12),
+              ),
             ),
           ],
         ),
@@ -664,14 +785,9 @@ class _ArchiveCard extends StatelessWidget {
         children: [
           IgnorePointer(
             ignoring: true,
-            child: Opacity(
-              opacity: 0.5,
-              child: expandedContent,
-            ),
+            child: Opacity(opacity: 0.5, child: expandedContent),
           ),
-          const CircularProgressIndicator(
-            color: AppColors.indigo500,
-          ),
+          const CircularProgressIndicator(color: AppColors.indigo500),
         ],
       );
     }

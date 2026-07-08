@@ -9,6 +9,7 @@ import 'pages/login_page.dart';
 import 'pages/pending_page.dart';
 import 'pages/settings_page.dart';
 import 'services/auth_service.dart';
+import 'services/clipboard_watcher.dart';
 import 'services/supabase_client_provider.dart';
 import 'theme/app_colors.dart';
 
@@ -37,9 +38,9 @@ class ArticleSummaryApp extends StatelessWidget {
           elevation: 0,
         ),
         textTheme: ThemeData.dark().textTheme.apply(
-              bodyColor: AppColors.slate100,
-              displayColor: AppColors.slate100,
-            ),
+          bodyColor: AppColors.slate100,
+          displayColor: AppColors.slate100,
+        ),
       ),
       home: const HomeShell(),
     );
@@ -53,7 +54,7 @@ class HomeShell extends StatefulWidget {
   State<HomeShell> createState() => _HomeShellState();
 }
 
-class _HomeShellState extends State<HomeShell> {
+class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
   int _index = 0;
   int? _chatTargetId;
   int _chatTargetSeq = 0;
@@ -61,6 +62,7 @@ class _HomeShellState extends State<HomeShell> {
   AppUser? _user;
   bool _authLoading = true;
   StreamSubscription<AuthState>? _authSub;
+  final _clipboardWatcher = ClipboardWatcher();
 
   static const _titles = ['Pending Approval', 'Archive', 'Chat', 'Settings'];
   static const _settingsIndex = 3;
@@ -68,7 +70,16 @@ class _HomeShellState extends State<HomeShell> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _clipboardWatcher.primeBaseline();
     _initAuth();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _user != null) {
+      _clipboardWatcher.checkOnResume();
+    }
   }
 
   Future<void> _initAuth() async {
@@ -92,6 +103,7 @@ class _HomeShellState extends State<HomeShell> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _authSub?.cancel();
     super.dispose();
   }
@@ -113,7 +125,10 @@ class _HomeShellState extends State<HomeShell> {
     final pages = [
       const PendingPage(),
       ArchivePage(onChatWithArticle: _openChatWithArticle),
-      ChatPage(initialContentId: _chatTargetId, initialRequestSeq: _chatTargetSeq),
+      ChatPage(
+        initialContentId: _chatTargetId,
+        initialRequestSeq: _chatTargetSeq,
+      ),
       const SettingsPage(),
     ];
 
@@ -135,10 +150,12 @@ class _HomeShellState extends State<HomeShell> {
       ),
       body: SafeArea(
         child: _authLoading
-            ? const Center(child: CircularProgressIndicator(color: AppColors.indigo500))
+            ? const Center(
+                child: CircularProgressIndicator(color: AppColors.indigo500),
+              )
             : locked
-                ? const LoginPage()
-                : IndexedStack(index: _index, children: pages),
+            ? const LoginPage()
+            : IndexedStack(index: _index, children: pages),
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
@@ -146,10 +163,22 @@ class _HomeShellState extends State<HomeShell> {
         backgroundColor: AppColors.slate900,
         indicatorColor: AppColors.indigo600,
         destinations: const [
-          NavigationDestination(icon: Icon(Icons.hourglass_empty), label: 'Pending'),
-          NavigationDestination(icon: Icon(Icons.archive_outlined), label: 'Archive'),
-          NavigationDestination(icon: Icon(Icons.chat_bubble_outline), label: 'Chat'),
-          NavigationDestination(icon: Icon(Icons.settings_outlined), label: 'Settings'),
+          NavigationDestination(
+            icon: Icon(Icons.hourglass_empty),
+            label: 'Pending',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.archive_outlined),
+            label: 'Archive',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.chat_bubble_outline),
+            label: 'Chat',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.settings_outlined),
+            label: 'Settings',
+          ),
         ],
       ),
     );

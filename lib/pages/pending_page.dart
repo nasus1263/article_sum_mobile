@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../constants/pipeline_defaults.dart';
 import '../models/content_record.dart';
 import '../services/content_repository.dart';
+import '../services/pipeline_settings_store.dart';
+import '../services/queue_events.dart';
 import '../services/supabase_config.dart';
 import '../theme/app_colors.dart';
 import '../widgets/content_card.dart';
@@ -23,20 +24,30 @@ class _PendingPageState extends State<PendingPage> {
   String? _error;
   String? _activeFolder;
   String _backendUrl = 'http://127.0.0.1:3000';
+  PipelineSettings _pipelineSettings = const PipelineSettings();
 
   @override
   void initState() {
     super.initState();
     _loadSettings();
     _refresh();
+    QueueEvents.updates.addListener(_refresh);
+  }
+
+  @override
+  void dispose() {
+    QueueEvents.updates.removeListener(_refresh);
+    super.dispose();
   }
 
   Future<void> _loadSettings() async {
     final config = await SupabaseConfigStore.load();
+    final pipelineSettings = await PipelineSettingsStore.load();
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
     setState(() {
       _backendUrl = config.cleanBackendUrl;
+      _pipelineSettings = pipelineSettings;
       _activeFolder = prefs.getString('active_folder');
     });
   }
@@ -69,9 +80,9 @@ class _PendingPageState extends State<PendingPage> {
       await _refresh();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Approve failed: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Approve failed: $e')));
     }
   }
 
@@ -80,15 +91,24 @@ class _PendingPageState extends State<PendingPage> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.slate900,
-        title: const Text('Discard this item?', style: TextStyle(color: AppColors.slate100)),
+        title: const Text(
+          'Discard this item?',
+          style: TextStyle(color: AppColors.slate100),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.slate400)),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: AppColors.slate400),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Discard', style: TextStyle(color: AppColors.red400)),
+            child: const Text(
+              'Discard',
+              style: TextStyle(color: AppColors.red400),
+            ),
           ),
         ],
       ),
@@ -100,35 +120,42 @@ class _PendingPageState extends State<PendingPage> {
       await _refresh();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Discard failed: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Discard failed: $e')));
     }
   }
 
   Future<void> _handleCancel(int id) async {
     try {
-      await _repo.discard(id); // cancel on desktop aborts active job and discards the record
+      await _repo.discard(
+        id,
+      ); // cancel on desktop aborts active job and discards the record
       await _refresh();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Cancel failed: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Cancel failed: $e')));
     }
   }
 
   Future<void> _handleRegenerate(int id) async {
     try {
       // Run in background and update database state
-      await _repo.regenerateSummary(id, _backendUrl, onProcessingStarted: _refresh);
+      await _repo.regenerateSummary(
+        id,
+        _backendUrl,
+        settings: _pipelineSettings,
+        onProcessingStarted: _refresh,
+      );
       await _refresh();
     } catch (e) {
       await _refresh(); // Refresh to show error on the card
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Regeneration failed: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Regeneration failed: $e')));
     }
   }
 
@@ -168,7 +195,11 @@ class _PendingPageState extends State<PendingPage> {
             children: [
               const Text(
                 'Approve into folder: ',
-                style: TextStyle(color: AppColors.slate400, fontSize: 13, fontWeight: FontWeight.w500),
+                style: TextStyle(
+                  color: AppColors.slate400,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -178,7 +209,10 @@ class _PendingPageState extends State<PendingPage> {
                   decoration: const InputDecoration(
                     filled: true,
                     fillColor: AppColors.slate900,
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.all(Radius.circular(8)),
                       borderSide: BorderSide(color: AppColors.slate700),
@@ -188,17 +222,17 @@ class _PendingPageState extends State<PendingPage> {
                       borderSide: BorderSide(color: AppColors.slate700),
                     ),
                   ),
-                  style: const TextStyle(color: AppColors.slate100, fontSize: 13),
+                  style: const TextStyle(
+                    color: AppColors.slate100,
+                    fontSize: 13,
+                  ),
                   items: [
                     const DropdownMenuItem<String>(
                       value: null,
                       child: Text('No folder'),
                     ),
-                    ...kDefaultCategories.map(
-                      (c) => DropdownMenuItem<String>(
-                        value: c,
-                        child: Text(c),
-                      ),
+                    ..._pipelineSettings.categories.map(
+                      (c) => DropdownMenuItem<String>(value: c, child: Text(c)),
                     ),
                   ],
                   onChanged: _saveActiveFolder,
@@ -218,7 +252,10 @@ class _PendingPageState extends State<PendingPage> {
                         padding: EdgeInsets.only(top: 32),
                         child: Text(
                           'No items pending approval. Try copying a link.',
-                          style: TextStyle(color: AppColors.slate500, fontSize: 13),
+                          style: TextStyle(
+                            color: AppColors.slate500,
+                            fontSize: 13,
+                          ),
                         ),
                       ),
                     ],
@@ -229,7 +266,8 @@ class _PendingPageState extends State<PendingPage> {
                     separatorBuilder: (_, _) => const SizedBox(height: 16),
                     itemBuilder: (context, i) => _PendingCard(
                       record: records[i],
-                      onShowFullText: () => showFullTextDialog(context, records[i]),
+                      onShowFullText: () =>
+                          showFullTextDialog(context, records[i]),
                       onApprove: () => _handleApprove(records[i].id),
                       onDiscard: () => _handleDiscard(records[i].id),
                       onCancel: () => _handleCancel(records[i].id),
@@ -288,7 +326,11 @@ class _PendingCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             r.data.title!,
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.slate100),
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: AppColors.slate100,
+            ),
           ),
         ],
         const SizedBox(height: 8),
@@ -313,7 +355,10 @@ class _PendingCard extends StatelessWidget {
         ],
         if (summary != null) ...[
           const SizedBox(height: 8),
-          Text(summary, style: const TextStyle(color: AppColors.slate200, height: 1.4)),
+          Text(
+            summary,
+            style: const TextStyle(color: AppColors.slate200, height: 1.4),
+          ),
         ],
         if (r.data.error != null) ...[
           const SizedBox(height: 8),
@@ -354,23 +399,37 @@ class _PendingCard extends StatelessWidget {
             if (r.data.processing)
               TextButton(
                 onPressed: onCancel,
-                child: const Text('Cancel', style: TextStyle(color: AppColors.red400, fontSize: 12)),
+                child: const Text(
+                  'Cancel',
+                  style: TextStyle(color: AppColors.red400, fontSize: 12),
+                ),
               )
             else ...[
               TextButton(
                 onPressed: onDiscard,
-                child: const Text('Discard', style: TextStyle(color: AppColors.red400, fontSize: 12)),
+                child: const Text(
+                  'Discard',
+                  style: TextStyle(color: AppColors.red400, fontSize: 12),
+                ),
               ),
               ElevatedButton(
                 onPressed: onApprove,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.indigo600,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
                   minimumSize: Size.zero,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
-                child: const Text('Approve', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+                child: const Text(
+                  'Approve',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                ),
               ),
             ],
           ],
@@ -384,14 +443,9 @@ class _PendingCard extends StatelessWidget {
         children: [
           IgnorePointer(
             ignoring: true,
-            child: Opacity(
-              opacity: 0.5,
-              child: cardContent,
-            ),
+            child: Opacity(opacity: 0.5, child: cardContent),
           ),
-          const CircularProgressIndicator(
-            color: AppColors.indigo500,
-          ),
+          const CircularProgressIndicator(color: AppColors.indigo500),
         ],
       );
     }
