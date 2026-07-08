@@ -1,9 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'pages/archive_page.dart';
 import 'pages/chat_page.dart';
+import 'pages/login_page.dart';
 import 'pages/pending_page.dart';
 import 'pages/settings_page.dart';
+import 'services/auth_service.dart';
+import 'services/supabase_client_provider.dart';
 import 'theme/app_colors.dart';
 
 void main() {
@@ -52,7 +58,43 @@ class _HomeShellState extends State<HomeShell> {
   int? _chatTargetId;
   int _chatTargetSeq = 0;
 
+  AppUser? _user;
+  bool _authLoading = true;
+  StreamSubscription<AuthState>? _authSub;
+
   static const _titles = ['Pending Approval', 'Archive', 'Chat', 'Settings'];
+  static const _settingsIndex = 3;
+
+  @override
+  void initState() {
+    super.initState();
+    _initAuth();
+  }
+
+  Future<void> _initAuth() async {
+    try {
+      final client = await SupabaseClientProvider.getClient();
+      if (!mounted) return;
+      setState(() {
+        _user = AppUser.fromSupabaseUser(client.auth.currentUser);
+        _authLoading = false;
+      });
+      _authSub = client.auth.onAuthStateChange.listen((state) {
+        if (!mounted) return;
+        setState(() => _user = AppUser.fromSupabaseUser(state.session?.user));
+      });
+    } catch (_) {
+      // Supabase not configured yet — Settings stays reachable to fix that.
+      if (!mounted) return;
+      setState(() => _authLoading = false);
+    }
+  }
+
+  @override
+  void dispose() {
+    _authSub?.cancel();
+    super.dispose();
+  }
 
   void _openChatWithArticle(int contentId) {
     setState(() {
@@ -60,6 +102,10 @@ class _HomeShellState extends State<HomeShell> {
       _chatTargetSeq++;
       _index = 2;
     });
+  }
+
+  Future<void> _signOut() async {
+    await AuthService.signOut();
   }
 
   @override
@@ -71,9 +117,29 @@ class _HomeShellState extends State<HomeShell> {
       const SettingsPage(),
     ];
 
+    final locked = !_authLoading && _user == null && _index != _settingsIndex;
+
     return Scaffold(
-      appBar: AppBar(title: Text(_titles[_index])),
-      body: SafeArea(child: IndexedStack(index: _index, children: pages)),
+      appBar: AppBar(
+        title: Text(_titles[_index]),
+        actions: [
+          if (_user != null)
+            TextButton(
+              onPressed: _signOut,
+              child: Text(
+                'Sign out (${_user!.email})',
+                style: const TextStyle(color: AppColors.slate400, fontSize: 12),
+              ),
+            ),
+        ],
+      ),
+      body: SafeArea(
+        child: _authLoading
+            ? const Center(child: CircularProgressIndicator(color: AppColors.indigo500))
+            : locked
+                ? const LoginPage()
+                : IndexedStack(index: _index, children: pages),
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
         onDestinationSelected: (i) => setState(() => _index = i),
