@@ -43,7 +43,7 @@ class ClipboardWatcher {
     await prefs.setString(_kLastSeenKey, text);
     if (!_urlRegex.hasMatch(text)) return;
 
-    Fluttertoast.showToast(msg: '링크 감지됨 — 백그라운드에서 처리 중...');
+    Fluttertoast.showToast(msg: 'Link detected - processing in background...');
     unawaited(_process(text));
   }
 
@@ -53,7 +53,7 @@ class ClipboardWatcher {
       final settings = await PipelineSettingsStore.load();
       await _repo.processLink(url, backendUrl, settings: settings);
     } catch (e) {
-      Fluttertoast.showToast(msg: '링크 처리 실패: $e');
+      Fluttertoast.showToast(msg: 'Link processing failed: $e');
     }
   }
 }

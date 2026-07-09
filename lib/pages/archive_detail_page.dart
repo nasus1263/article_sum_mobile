@@ -163,7 +163,7 @@ class _ArchiveDetailPageState extends State<ArchiveDetailPage> {
                     ],
                     if (r.data.embeddingError != null || r.embedding == null) ...[
                       const SizedBox(width: 6),
-                      Pill(label: '⚠ 관련 기사 검색 제외'),
+                      Pill(label: '⚠ Excluded from related search'),
                     ],
                     const Spacer(),
                     Text(
@@ -221,7 +221,7 @@ class _ArchiveDetailPageState extends State<ArchiveDetailPage> {
                 if (_related.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   const Text(
-                    '관련 기사',
+                    'Related Articles',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
@@ -230,7 +230,7 @@ class _ArchiveDetailPageState extends State<ArchiveDetailPage> {
                   ),
                   const SizedBox(height: 6),
                   SizedBox(
-                    height: 150,
+                    height: 220,
                     child: ListView.separated(
                       scrollDirection: Axis.horizontal,
                       itemCount: _related.length,
@@ -290,7 +290,7 @@ class _ArchiveDetailPageState extends State<ArchiveDetailPage> {
                                   if (rel.similarity != null) ...[
                                     Pill(
                                       label:
-                                          '유사도 ${(rel.similarity! * 100).round()}%',
+                                          'Similarity ${(rel.similarity! * 100).round()}%',
                                     ),
                                     const SizedBox(height: 4),
                                   ],

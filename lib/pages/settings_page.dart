@@ -302,8 +302,8 @@ class _SettingsPageState extends State<SettingsPage> {
         ContentCard(
           children: [
             const Text(
-              '앱을 열지 않아도 링크 복사를 감지하려면 접근성 권한이 필요합니다. '
-              '아래 버튼으로 설정을 열고 "Clip Brief 클립보드 감시"를 켜주세요.',
+              'Accessibility permission is required to detect link copying without opening the app. '
+              'Please open settings with the button below and turn on "Clip Brief Clipboard Monitor".',
               style: TextStyle(color: AppColors.slate500, fontSize: 12),
             ),
             const SizedBox(height: 12),
@@ -317,7 +317,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
               ),
               child: const Text(
-                '접근성 설정 열기',
+                'Open Accessibility Settings',
                 style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
               ),
             ),
