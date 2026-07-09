@@ -75,6 +75,7 @@ class ContentRecord {
   final ContentData data;
   final DateTime createdAt;
   final double? similarity;
+  final List<double>? embedding;
 
   const ContentRecord({
     required this.id,
@@ -84,6 +85,7 @@ class ContentRecord {
     required this.data,
     required this.createdAt,
     this.similarity,
+    this.embedding,
   });
 
   factory ContentRecord.fromJson(Map<String, dynamic> json) {
@@ -97,6 +99,19 @@ class ContentRecord {
       ),
       createdAt: DateTime.parse(json['created_at'] as String),
       similarity: (json['similarity'] as num?)?.toDouble(),
+      embedding: _parseEmbedding(json['embedding']),
     );
+  }
+
+  /// pgvector columns come back as a JSON list from postgrest, but as a
+  /// "[0.1,0.2,...]" string from some RPC paths (e.g. match_contents).
+  static List<double>? _parseEmbedding(Object? raw) {
+    if (raw is List) return raw.map((e) => (e as num).toDouble()).toList();
+    if (raw is String && raw.isNotEmpty) {
+      final trimmed = raw.replaceAll('[', '').replaceAll(']', '');
+      if (trimmed.isEmpty) return null;
+      return trimmed.split(',').map((e) => double.parse(e)).toList();
+    }
+    return null;
   }
 }

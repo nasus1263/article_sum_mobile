@@ -161,7 +161,7 @@ class _ArchiveDetailPageState extends State<ArchiveDetailPage> {
                       const SizedBox(width: 6),
                       Pill(label: r.data.category!),
                     ],
-                    if (r.data.embeddingError != null) ...[
+                    if (r.data.embeddingError != null || r.embedding == null) ...[
                       const SizedBox(width: 6),
                       Pill(label: '⚠ 관련 기사 검색 제외'),
                     ],

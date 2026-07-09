@@ -22,7 +22,7 @@ class ContentRepository {
     final client = await SupabaseClientProvider.getClient();
     final rows = await client
         .from('contents')
-        .select('id, url, tag, status, data, created_at')
+        .select('id, url, tag, status, data, embedding, created_at')
         .eq('status', status)
         .order('id', ascending: status == 'pending');
     return (rows as List)
@@ -71,7 +71,7 @@ class ContentRepository {
     final client = await SupabaseClientProvider.getClient();
     final response = await client
         .from('contents')
-        .select('id, url, tag, status, data, created_at')
+        .select('id, url, tag, status, data, embedding, created_at')
         .eq('id', id)
         .single();
     final record = ContentRecord.fromJson(response);
