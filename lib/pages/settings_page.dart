@@ -19,7 +19,7 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _loaded = false;
 
   PipelineSettings _pipeline = const PipelineSettings();
-  final _newCategoryController = TextEditingController();
+  final _newFolderController = TextEditingController();
 
   @override
   void initState() {
@@ -50,30 +50,30 @@ class _SettingsPageState extends State<SettingsPage> {
     await PipelineSettingsStore.save(next);
   }
 
-  void _renameCategory(int index, String value) {
-    final next = List.of(_pipeline.categories);
+  void _renameFolder(int index, String value) {
+    final next = List.of(_pipeline.folders);
     next[index] = value;
-    _updatePipeline(_pipeline.copyWith(categories: next));
+    _updatePipeline(_pipeline.copyWith(folders: next));
   }
 
-  void _removeCategory(int index) {
-    final next = List.of(_pipeline.categories)..removeAt(index);
-    _updatePipeline(_pipeline.copyWith(categories: next));
+  void _removeFolder(int index) {
+    final next = List.of(_pipeline.folders)..removeAt(index);
+    _updatePipeline(_pipeline.copyWith(folders: next));
   }
 
-  void _addCategory() {
-    final trimmed = _newCategoryController.text.trim();
-    if (trimmed.isEmpty || _pipeline.categories.contains(trimmed)) return;
+  void _addFolder() {
+    final trimmed = _newFolderController.text.trim();
+    if (trimmed.isEmpty || _pipeline.folders.contains(trimmed)) return;
     _updatePipeline(
-      _pipeline.copyWith(categories: [..._pipeline.categories, trimmed]),
+      _pipeline.copyWith(folders: [..._pipeline.folders, trimmed]),
     );
-    _newCategoryController.clear();
+    _newFolderController.clear();
   }
 
   @override
   void dispose() {
     _backendUrlController.dispose();
-    _newCategoryController.dispose();
+    _newFolderController.dispose();
     super.dispose();
   }
 
@@ -192,7 +192,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
         const SizedBox(height: 24),
         const Text(
-          'Categories',
+          'Folders',
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
@@ -202,18 +202,18 @@ class _SettingsPageState extends State<SettingsPage> {
         const SizedBox(height: 12),
         ContentCard(
           children: [
-            for (var i = 0; i < _pipeline.categories.length; i++)
+            for (var i = 0; i < _pipeline.folders.length; i++)
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Row(
                   children: [
                     Expanded(
                       child: TextField(
-                        key: ValueKey('category_$i'),
+                        key: ValueKey('folder_$i'),
                         controller: TextEditingController(
-                          text: _pipeline.categories[i],
+                          text: _pipeline.folders[i],
                         ),
-                        onChanged: (v) => _renameCategory(i, v),
+                        onChanged: (v) => _renameFolder(i, v),
                         style: const TextStyle(
                           color: AppColors.slate100,
                           fontSize: 13,
@@ -222,7 +222,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       ),
                     ),
                     TextButton(
-                      onPressed: () => _removeCategory(i),
+                      onPressed: () => _removeFolder(i),
                       child: const Text(
                         'Remove',
                         style: TextStyle(color: AppColors.red400, fontSize: 12),
@@ -235,17 +235,17 @@ class _SettingsPageState extends State<SettingsPage> {
               children: [
                 Expanded(
                   child: TextField(
-                    controller: _newCategoryController,
+                    controller: _newFolderController,
                     style: const TextStyle(
                       color: AppColors.slate100,
                       fontSize: 13,
                     ),
-                    decoration: _fieldDecoration(hint: 'New category'),
+                    decoration: _fieldDecoration(hint: 'New folder'),
                   ),
                 ),
                 const SizedBox(width: 8),
                 ElevatedButton(
-                  onPressed: _addCategory,
+                  onPressed: _addFolder,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.indigo600,
                     foregroundColor: Colors.white,

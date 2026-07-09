@@ -44,11 +44,19 @@ class _ArchiveDetailPageState extends State<ArchiveDetailPage> {
   }
 
   Future<void> _fetchRelated() async {
+    debugPrint(
+      '[ArchiveDetail] fetching related articles for id=${_record.id}',
+    );
     try {
       final related = await _repo.getRelated(_record.id);
+      debugPrint(
+        '[ArchiveDetail] id=${_record.id} got ${related.length} related article(s): '
+        '${related.map((r) => r.id).toList()}',
+      );
       if (!mounted) return;
       setState(() => _related = related);
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[ArchiveDetail] id=${_record.id} getRelated failed: $e');
       // Ignore errors fetching related articles gracefully
     }
   }
@@ -230,65 +238,86 @@ class _ArchiveDetailPageState extends State<ArchiveDetailPage> {
                       itemBuilder: (context, idx) {
                         final rel = _related[idx];
                         final relSummary = rel.data.firstSummary;
+                        final isWeak =
+                            rel.similarity != null && rel.similarity! <= 0.5;
                         return InkWell(
-                          onTap: () => showFullTextDialog(context, rel),
-                          child: Container(
-                            width: 180,
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: AppColors.slate800.withAlpha(180),
-                              border: Border.all(color: AppColors.slate700),
-                              borderRadius: BorderRadius.circular(8),
+                          onTap: () => Navigator.of(context).pushReplacement(
+                            MaterialPageRoute(
+                              builder: (context) => ArchiveDetailPage(
+                                record: rel,
+                                backendUrl: widget.backendUrl,
+                                pipelineSettings: widget.pipelineSettings,
+                                onChatWithArticle: widget.onChatWithArticle,
+                              ),
                             ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                if (rel.data.firstImage != null)
-                                  ClipRRect(
-                                    borderRadius: BorderRadius.circular(4),
-                                    child: Image.network(
-                                      rel.data.firstImage!,
-                                      height: 60,
-                                      width: double.infinity,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (_, _, _) => Container(
+                          ),
+                          child: Opacity(
+                            opacity: isWeak ? 0.5 : 1.0,
+                            child: Container(
+                              width: 180,
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: AppColors.slate800.withAlpha(180),
+                                border: Border.all(color: AppColors.slate700),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  if (rel.data.firstImage != null)
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(4),
+                                      child: Image.network(
+                                        rel.data.firstImage!,
                                         height: 60,
+                                        width: double.infinity,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (_, _, _) => Container(
+                                          height: 60,
+                                          color: AppColors.slate700,
+                                        ),
+                                      ),
+                                    )
+                                  else
+                                    Container(
+                                      height: 60,
+                                      decoration: BoxDecoration(
                                         color: AppColors.slate700,
+                                        borderRadius: BorderRadius.circular(4),
                                       ),
                                     ),
-                                  )
-                                else
-                                  Container(
-                                    height: 60,
-                                    decoration: BoxDecoration(
-                                      color: AppColors.slate700,
-                                      borderRadius: BorderRadius.circular(4),
+                                  const SizedBox(height: 6),
+                                  if (rel.similarity != null) ...[
+                                    Pill(
+                                      label:
+                                          '유사도 ${(rel.similarity! * 100).round()}%',
                                     ),
-                                  ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  rel.data.title ?? rel.url,
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.slate100,
-                                  ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                if (relSummary != null) ...[
-                                  const SizedBox(height: 4),
+                                    const SizedBox(height: 4),
+                                  ],
                                   Text(
-                                    relSummary,
+                                    rel.data.title ?? rel.url,
                                     style: const TextStyle(
-                                      fontSize: 10,
-                                      color: AppColors.slate400,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.slate100,
                                     ),
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                   ),
+                                  if (relSummary != null) ...[
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      relSummary,
+                                      style: const TextStyle(
+                                        fontSize: 10,
+                                        color: AppColors.slate400,
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
                                 ],
-                              ],
+                              ),
                             ),
                           ),
                         );
@@ -407,10 +436,7 @@ class _ArchiveDetailPageState extends State<ArchiveDetailPage> {
                       onPressed: _handleDelete,
                       child: const Text(
                         'Delete',
-                        style: TextStyle(
-                          color: AppColors.red400,
-                          fontSize: 12,
-                        ),
+                        style: TextStyle(color: AppColors.red400, fontSize: 12),
                       ),
                     ),
                   ],

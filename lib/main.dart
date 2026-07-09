@@ -22,7 +22,16 @@ const _kClipboardCallbackHandleKey = 'clipboard_callback_handle';
 
 void main() {
   _registerClipboardCallbackHandle();
+  _debugResetActiveFolder();
   runApp(const ArticleSummaryApp());
+}
+
+/// Debug-only: clears any stale 'active_folder' pref (e.g. from before
+/// folders were switched to kDefaultFolders) so PendingPage's dropdown
+/// never starts with a value outside kDefaultFolders and crashes.
+Future<void> _debugResetActiveFolder() async {
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.remove('active_folder');
 }
 
 /// The callback handle can change between builds, so it's re-registered on

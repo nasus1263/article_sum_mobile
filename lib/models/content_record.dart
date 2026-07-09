@@ -59,8 +59,9 @@ class ContentData {
     };
   }
 
-  String? get firstSummary =>
-      (summaries != null && summaries!.isNotEmpty) ? summaries!.values.first : null;
+  String? get firstSummary => (summaries != null && summaries!.isNotEmpty)
+      ? summaries!.values.first
+      : null;
 
   String? get firstImage =>
       (images != null && images!.isNotEmpty) ? images!.first : null;
@@ -73,6 +74,7 @@ class ContentRecord {
   final String status;
   final ContentData data;
   final DateTime createdAt;
+  final double? similarity;
 
   const ContentRecord({
     required this.id,
@@ -81,6 +83,7 @@ class ContentRecord {
     required this.status,
     required this.data,
     required this.createdAt,
+    this.similarity,
   });
 
   factory ContentRecord.fromJson(Map<String, dynamic> json) {
@@ -93,6 +96,7 @@ class ContentRecord {
         (json['data'] as Map?)?.cast<String, dynamic>() ?? {},
       ),
       createdAt: DateTime.parse(json['created_at'] as String),
+      similarity: (json['similarity'] as num?)?.toDouble(),
     );
   }
 }

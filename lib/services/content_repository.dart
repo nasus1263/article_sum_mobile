@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../constants/pipeline_defaults.dart';
 import '../models/content_record.dart';
 import 'pipeline_settings_store.dart';
 import 'queue_events.dart';
@@ -52,7 +53,10 @@ class ContentRepository {
 
   Future<List<ContentRecord>> getRelated(int id) async {
     final client = await SupabaseClientProvider.getClient();
-    final rows = await client.rpc('match_contents', params: {'source_id': id});
+    final rows = await client.rpc(
+      'match_contents',
+      params: {'source_id': id, 'match_count': 5},
+    );
     return (rows as List)
         .map((r) => ContentRecord.fromJson(r as Map<String, dynamic>))
         .toList();
@@ -94,7 +98,7 @@ class ContentRepository {
                 'kidFriendly': settings.kidFriendly,
                 'language': settings.language,
               },
-              'categories': settings.categories,
+              'categories': kDefaultCategories,
             }),
           )
           .timeout(const Duration(seconds: 45));
@@ -157,6 +161,7 @@ class ContentRepository {
       'stage': 'Fetching article...',
     };
     var tag = 'Article';
+    Object? embedding;
     try {
       final res = await http
           .post(
@@ -169,7 +174,7 @@ class ContentRepository {
                 'kidFriendly': settings.kidFriendly,
                 'language': settings.language,
               },
-              'categories': settings.categories,
+              'categories': kDefaultCategories,
             }),
           )
           .timeout(const Duration(seconds: 60));
@@ -186,6 +191,8 @@ class ContentRepository {
         data['images'] = result['images'] ?? [];
         data['title'] = result['title'];
         data['summaries'] = <String, dynamic>{};
+        data['embeddingError'] = result['embeddingError'];
+        embedding = result['embedding'];
         if (result['error'] != null) {
           data['error'] = result['error'];
         } else {
@@ -197,7 +204,7 @@ class ContentRepository {
       data.remove('stage');
       await client
           .from('contents')
-          .update({'tag': tag, 'data': data})
+          .update({'tag': tag, 'data': data, 'embedding': embedding})
           .eq('id', id);
     } catch (e) {
       data['processing'] = false;
@@ -205,7 +212,7 @@ class ContentRepository {
       data['error'] = e.toString();
       await client
           .from('contents')
-          .update({'tag': tag, 'data': data})
+          .update({'tag': tag, 'data': data, 'embedding': embedding})
           .eq('id', id);
       rethrow;
     } finally {

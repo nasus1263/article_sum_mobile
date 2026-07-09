@@ -231,7 +231,7 @@ class _PendingPageState extends State<PendingPage> {
                       value: null,
                       child: Text('No folder'),
                     ),
-                    ..._pipelineSettings.categories.map(
+                    ..._pipelineSettings.folders.map(
                       (c) => DropdownMenuItem<String>(value: c, child: Text(c)),
                     ),
                   ],

@@ -25,6 +25,7 @@ class _ArchivePageState extends State<ArchivePage> {
   final _searchController = TextEditingController();
   String _search = '';
   final Set<String> _categoryFilter = {};
+  String? _folderFilter;
   String _backendUrl = kDefaultBackendUrl;
   PipelineSettings _pipelineSettings = const PipelineSettings();
 
@@ -74,6 +75,10 @@ class _ArchivePageState extends State<ArchivePage> {
         _categoryFilter.add(category);
       }
     });
+  }
+
+  void _selectFolder(String? folder) {
+    setState(() => _folderFilter = folder);
   }
 
   Future<void> _handleViewOnWeb(String url) async {
@@ -146,6 +151,9 @@ class _ArchivePageState extends State<ArchivePage> {
               _categoryFilter.contains(r.data.category))) {
         return false;
       }
+      if (_folderFilter != null && r.data.folder != _folderFilter) {
+        return false;
+      }
       if (query.isEmpty) return true;
       final summary = r.data.firstSummary?.toLowerCase() ?? '';
       return r.url.toLowerCase().contains(query) || summary.contains(query);
@@ -196,20 +204,75 @@ class _ArchivePageState extends State<ArchivePage> {
           ),
           if (sortedCategories.isNotEmpty) ...[
             const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: sortedCategories
-                  .map(
-                    (c) => Pill(
-                      label: c,
-                      active: _categoryFilter.contains(c),
-                      onTap: () => _toggleCategory(c),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.only(top: 4, right: 8),
+                  child: Text(
+                    'Category',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.slate500,
                     ),
-                  )
-                  .toList(),
+                  ),
+                ),
+                Expanded(
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: sortedCategories
+                        .map(
+                          (c) => Pill(
+                            label: c,
+                            active: _categoryFilter.contains(c),
+                            onTap: () => _toggleCategory(c),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ),
+              ],
             ),
           ],
+          const SizedBox(height: 12),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Padding(
+                padding: EdgeInsets.only(top: 4, right: 8),
+                child: Text(
+                  'Folder',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.slate500,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    Pill(
+                      label: 'ALL',
+                      active: _folderFilter == null,
+                      onTap: () => _selectFolder(null),
+                    ),
+                    ..._pipelineSettings.folders.map(
+                      (f) => Pill(
+                        label: f,
+                        active: _folderFilter == f,
+                        onTap: () => _selectFolder(f),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: 24),
           if (records.isEmpty)
             const Text(

@@ -21,3 +21,9 @@ const kDefaultCategories = [
   'Sports',
   'IT',
 ];
+
+const kDefaultFolders = [
+  '🚨 BREAKING NEWS',
+  '⭐ My favorite',
+  '🎉 Fun',
+];
