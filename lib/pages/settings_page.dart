@@ -85,15 +85,15 @@ class _SettingsPageState extends State<SettingsPage> {
       fillColor: AppColors.slate900,
       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       border: const OutlineInputBorder(
-        borderRadius: BorderRadius.all(Radius.circular(8)),
+        borderRadius: BorderRadius.all(Radius.circular(2)),
         borderSide: BorderSide(color: AppColors.slate700),
       ),
       enabledBorder: const OutlineInputBorder(
-        borderRadius: BorderRadius.all(Radius.circular(8)),
+        borderRadius: BorderRadius.all(Radius.circular(2)),
         borderSide: BorderSide(color: AppColors.slate700),
       ),
       focusedBorder: const OutlineInputBorder(
-        borderRadius: BorderRadius.all(Radius.circular(8)),
+        borderRadius: BorderRadius.all(Radius.circular(2)),
         borderSide: BorderSide(color: AppColors.indigo500),
       ),
     );
@@ -248,9 +248,9 @@ class _SettingsPageState extends State<SettingsPage> {
                   onPressed: _addFolder,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.indigo600,
-                    foregroundColor: Colors.white,
+                    foregroundColor: AppColors.slate100,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(2),
                     ),
                   ),
                   child: const Text(
@@ -311,9 +311,9 @@ class _SettingsPageState extends State<SettingsPage> {
               onPressed: SystemSettings.openAccessibilitySettings,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.indigo600,
-                foregroundColor: Colors.white,
+                foregroundColor: AppColors.slate100,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
               child: const Text(

@@ -9,7 +9,7 @@ void showFullTextDialog(BuildContext context, ContentRecord record) {
     builder: (context) => Dialog(
       backgroundColor: AppColors.slate900,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(2),
         side: const BorderSide(color: AppColors.slate800),
       ),
       child: ConstrainedBox(
@@ -31,9 +31,10 @@ void showFullTextDialog(BuildContext context, ContentRecord record) {
                           Text(
                             record.data.title!,
                             style: const TextStyle(
+                              fontFamily: 'serif',
                               color: AppColors.slate100,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
                             ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,

@@ -204,8 +204,9 @@ class _ArchiveDetailPageState extends State<ArchiveDetailPage> {
                   Text(
                     r.data.title!,
                     style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
+                      fontFamily: 'serif',
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
                       color: AppColors.slate100,
                     ),
                   ),
@@ -219,12 +220,20 @@ class _ArchiveDetailPageState extends State<ArchiveDetailPage> {
                       itemCount: images.length,
                       separatorBuilder: (_, _) => const SizedBox(width: 8),
                       itemBuilder: (context, i) => ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Image.network(
-                          images[i],
-                          height: 200,
-                          fit: BoxFit.contain,
-                          errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                        borderRadius: BorderRadius.circular(2),
+                        child: ColorFiltered(
+                          colorFilter: const ColorFilter.matrix(<double>[
+                            0.2126, 0.7152, 0.0722, 0, 0,
+                            0.2126, 0.7152, 0.0722, 0, 0,
+                            0.2126, 0.7152, 0.0722, 0, 0,
+                            0,      0,      0,      1, 0,
+                          ]),
+                          child: Image.network(
+                            images[i],
+                            height: 200,
+                            fit: BoxFit.contain,
+                            errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                          ),
                         ),
                       ),
                     ),
@@ -279,24 +288,32 @@ class _ArchiveDetailPageState extends State<ArchiveDetailPage> {
                               width: 180,
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: AppColors.slate800.withAlpha(180),
+                                color: AppColors.slate800,
                                 border: Border.all(color: AppColors.slate700),
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(2),
                               ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   if (rel.data.firstImage != null)
                                     ClipRRect(
-                                      borderRadius: BorderRadius.circular(4),
-                                      child: Image.network(
-                                        rel.data.firstImage!,
-                                        height: 60,
-                                        width: double.infinity,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (_, _, _) => Container(
+                                      borderRadius: BorderRadius.circular(2),
+                                      child: ColorFiltered(
+                                        colorFilter: const ColorFilter.matrix(<double>[
+                                          0.2126, 0.7152, 0.0722, 0, 0,
+                                          0.2126, 0.7152, 0.0722, 0, 0,
+                                          0.2126, 0.7152, 0.0722, 0, 0,
+                                          0,      0,      0,      1, 0,
+                                        ]),
+                                        child: Image.network(
+                                          rel.data.firstImage!,
                                           height: 60,
-                                          color: AppColors.slate700,
+                                          width: double.infinity,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (_, _, _) => Container(
+                                            height: 60,
+                                            color: AppColors.slate700,
+                                          ),
                                         ),
                                       ),
                                     )
@@ -387,7 +404,7 @@ class _ArchiveDetailPageState extends State<ArchiveDetailPage> {
                           ),
                           minimumSize: Size.zero,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(2),
                           ),
                         ),
                         child: const Text(
@@ -400,14 +417,14 @@ class _ArchiveDetailPageState extends State<ArchiveDetailPage> {
                         onPressed: () => widget.onChatWithArticle(r.id),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.indigo600,
-                          foregroundColor: Colors.white,
+                          foregroundColor: AppColors.slate100,
                           padding: const EdgeInsets.symmetric(
                             horizontal: 12,
                             vertical: 6,
                           ),
                           minimumSize: Size.zero,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(2),
                           ),
                         ),
                         child: const Text(
@@ -427,7 +444,7 @@ class _ArchiveDetailPageState extends State<ArchiveDetailPage> {
                           ),
                           minimumSize: Size.zero,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(2),
                           ),
                         ),
                         child: const Text(
@@ -446,7 +463,7 @@ class _ArchiveDetailPageState extends State<ArchiveDetailPage> {
                         ),
                         minimumSize: Size.zero,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(2),
                         ),
                       ),
                       child: const Text(

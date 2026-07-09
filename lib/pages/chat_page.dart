@@ -301,16 +301,24 @@ class _ChatPageState extends State<ChatPage> {
             onTap: () => _openSession(id),
             leading: article.data.firstImage != null
                 ? ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.network(
-                      article.data.firstImage!,
-                      height: 44,
-                      width: 44,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) => Container(
+                    borderRadius: BorderRadius.circular(2),
+                    child: ColorFiltered(
+                      colorFilter: const ColorFilter.matrix(<double>[
+                        0.2126, 0.7152, 0.0722, 0, 0,
+                        0.2126, 0.7152, 0.0722, 0, 0,
+                        0.2126, 0.7152, 0.0722, 0, 0,
+                        0,      0,      0,      1, 0,
+                      ]),
+                      child: Image.network(
+                        article.data.firstImage!,
                         height: 44,
                         width: 44,
-                        color: AppColors.slate800,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => Container(
+                          height: 44,
+                          width: 44,
+                          color: AppColors.slate800,
+                        ),
                       ),
                     ),
                   )
@@ -460,7 +468,7 @@ class _ChatPageState extends State<ChatPage> {
             decoration: BoxDecoration(
               color: AppColors.slate900,
               border: Border.all(color: AppColors.slate700),
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: BorderRadius.circular(2),
             ),
             child: Row(
               children: [
@@ -491,13 +499,13 @@ class _ChatPageState extends State<ChatPage> {
                             ? AppColors.indigo600
                             : AppColors.slate800,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(999),
+                          borderRadius: BorderRadius.circular(2),
                         ),
                       ),
                       child: Text(
                         'Send',
                         style: TextStyle(
-                          color: canSend ? Colors.white : AppColors.slate600,
+                          color: canSend ? AppColors.slate100 : AppColors.slate600,
                           fontSize: 13,
                         ),
                       ),
@@ -530,13 +538,14 @@ class _MessageBubble extends StatelessWidget {
         ),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-          color: isUser ? AppColors.indigo600 : AppColors.slate800,
-          borderRadius: BorderRadius.circular(16),
+          color: isUser ? AppColors.slate100 : AppColors.slate900,
+          border: Border.all(color: AppColors.slate100),
+          borderRadius: BorderRadius.circular(2),
         ),
         child: Text(
           message.content,
           style: TextStyle(
-            color: isUser ? Colors.white : AppColors.slate100,
+            color: isUser ? AppColors.slate950 : AppColors.slate100,
             fontSize: 14,
             height: 1.4,
           ),

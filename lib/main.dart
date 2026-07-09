@@ -51,9 +51,9 @@ class ArticleSummaryApp extends StatelessWidget {
     return MaterialApp(
       title: 'Clip Brief',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData.dark().copyWith(
+      theme: ThemeData.light().copyWith(
         scaffoldBackgroundColor: AppColors.slate950,
-        colorScheme: const ColorScheme.dark(
+        colorScheme: const ColorScheme.light(
           primary: AppColors.indigo600,
           secondary: AppColors.indigo500,
           surface: AppColors.slate900,
@@ -62,8 +62,14 @@ class ArticleSummaryApp extends StatelessWidget {
           backgroundColor: AppColors.slate950,
           foregroundColor: AppColors.slate100,
           elevation: 0,
+          titleTextStyle: TextStyle(
+            fontFamily: 'serif',
+            fontSize: 22,
+            fontWeight: FontWeight.w900,
+            color: AppColors.slate100,
+          ),
         ),
-        textTheme: ThemeData.dark().textTheme.apply(
+        textTheme: ThemeData.light().textTheme.apply(
           bodyColor: AppColors.slate100,
           displayColor: AppColors.slate100,
         ),

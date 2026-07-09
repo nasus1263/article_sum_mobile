@@ -173,13 +173,13 @@ class _ArchivePageState extends State<ArchivePage> {
 
           return InkWell(
             onTap: () => _openDetail(latest),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(2),
             child: Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: AppColors.slate900.withValues(alpha: 0.5),
+                color: AppColors.slate900,
                 border: Border.all(color: AppColors.slate800),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(2),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -329,15 +329,15 @@ class _ArchivePageState extends State<ArchivePage> {
                 vertical: 10,
               ),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.all(Radius.circular(8)),
+                borderRadius: BorderRadius.all(Radius.circular(2)),
                 borderSide: BorderSide(color: AppColors.slate700),
               ),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.all(Radius.circular(8)),
+                borderRadius: BorderRadius.all(Radius.circular(2)),
                 borderSide: BorderSide(color: AppColors.slate700),
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.all(Radius.circular(8)),
+                borderRadius: BorderRadius.all(Radius.circular(2)),
                 borderSide: BorderSide(color: AppColors.indigo500),
               ),
             ),
@@ -501,27 +501,35 @@ class _FeaturedCard extends StatelessWidget {
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(2),
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.slate900.withValues(alpha: 0.5),
+          color: AppColors.slate900,
           border: Border.all(color: AppColors.slate800),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(2),
         ),
         clipBehavior: Clip.antiAlias,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (image != null)
-              Image.network(
-                image,
-                height: 180,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => Container(
-                  height: 120,
-                  color: AppColors.slate800,
-                  child: const Center(child: Icon(Icons.image, color: AppColors.slate600)),
+              ColorFiltered(
+                colorFilter: const ColorFilter.matrix(<double>[
+                  0.2126, 0.7152, 0.0722, 0, 0,
+                  0.2126, 0.7152, 0.0722, 0, 0,
+                  0.2126, 0.7152, 0.0722, 0, 0,
+                  0,      0,      0,      1, 0,
+                ]),
+                child: Image.network(
+                  image,
+                  height: 180,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) => Container(
+                    height: 120,
+                    color: AppColors.slate800,
+                    child: const Center(child: Icon(Icons.image, color: AppColors.slate600)),
+                  ),
                 ),
               )
             else
@@ -723,7 +731,7 @@ class _ArchiveThumbnail extends StatelessWidget {
         width: size,
         decoration: BoxDecoration(
           color: AppColors.slate800,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(2),
         ),
       );
     }
@@ -743,7 +751,7 @@ class _ArchiveThumbnail extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: AppColors.slate800,
                   border: Border.all(color: AppColors.slate700),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
             ),
@@ -755,22 +763,30 @@ class _ArchiveThumbnail extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: AppColors.slate800,
                   border: Border.all(color: AppColors.slate700),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
             ),
           ],
           ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: Image.network(
-              images!.first,
-              height: size,
-              width: size,
-              fit: BoxFit.cover,
-              errorBuilder: (_, _, _) => Container(
+            borderRadius: BorderRadius.circular(2),
+            child: ColorFiltered(
+              colorFilter: const ColorFilter.matrix(<double>[
+                0.2126, 0.7152, 0.0722, 0, 0,
+                0.2126, 0.7152, 0.0722, 0, 0,
+                0.2126, 0.7152, 0.0722, 0, 0,
+                0,      0,      0,      1, 0,
+              ]),
+              child: Image.network(
+                images!.first,
                 height: size,
                 width: size,
-                color: AppColors.slate800,
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) => Container(
+                  height: size,
+                  width: size,
+                  color: AppColors.slate800,
+                ),
               ),
             ),
           ),

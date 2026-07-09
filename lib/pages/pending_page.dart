@@ -239,15 +239,15 @@ class _PendingPageState extends State<PendingPage> {
                       vertical: 10,
                     ),
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(8)),
+                      borderRadius: BorderRadius.all(Radius.circular(2)),
                       borderSide: BorderSide(color: AppColors.slate700),
                     ),
                     enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(8)),
+                      borderRadius: BorderRadius.all(Radius.circular(2)),
                       borderSide: BorderSide(color: AppColors.slate700),
                     ),
                     focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(8)),
+                      borderRadius: BorderRadius.all(Radius.circular(2)),
                       borderSide: BorderSide(color: AppColors.indigo500),
                     ),
                   ),
@@ -258,11 +258,11 @@ class _PendingPageState extends State<PendingPage> {
                 onPressed: _submittingUrl ? null : _submitUrl,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.indigo600,
-                  foregroundColor: Colors.white,
+                  foregroundColor: AppColors.slate100,
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   minimumSize: Size.zero,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(2),
                   ),
                 ),
                 child: _submittingUrl
@@ -271,7 +271,7 @@ class _PendingPageState extends State<PendingPage> {
                         height: 16,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: Colors.white,
+                          color: AppColors.slate100,
                         ),
                       )
                     : const Text('Create brief'),
@@ -440,12 +440,20 @@ class _PendingCard extends StatelessWidget {
               itemCount: r.data.images!.length,
               separatorBuilder: (_, _) => const SizedBox(width: 8),
               itemBuilder: (context, i) => ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.network(
-                  r.data.images![i],
-                  height: 180,
-                  fit: BoxFit.contain,
-                  errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                borderRadius: BorderRadius.circular(2),
+                child: ColorFiltered(
+                  colorFilter: const ColorFilter.matrix(<double>[
+                    0.2126, 0.7152, 0.0722, 0, 0,
+                    0.2126, 0.7152, 0.0722, 0, 0,
+                    0.2126, 0.7152, 0.0722, 0, 0,
+                    0,      0,      0,      1, 0,
+                  ]),
+                  child: Image.network(
+                    r.data.images![i],
+                    height: 180,
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                  ),
                 ),
               ),
             ),
@@ -466,7 +474,7 @@ class _PendingCard extends StatelessWidget {
             decoration: BoxDecoration(
               color: AppColors.red950.withValues(alpha: 0.4),
               border: Border.all(color: AppColors.red900),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(2),
             ),
             child: Text(
               r.data.error!,
@@ -514,14 +522,14 @@ class _PendingCard extends StatelessWidget {
                 onPressed: onApprove,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.indigo600,
-                  foregroundColor: Colors.white,
+                  foregroundColor: AppColors.slate100,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 14,
                     vertical: 8,
                   ),
                   minimumSize: Size.zero,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(2),
                   ),
                 ),
                 child: const Text(

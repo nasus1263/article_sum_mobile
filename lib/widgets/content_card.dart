@@ -20,16 +20,16 @@ class ContentCard extends StatelessWidget {
     final card = Container(
       padding: padding,
       decoration: BoxDecoration(
-        color: AppColors.slate900.withValues(alpha: 0.5),
+        color: AppColors.slate900,
         border: Border.all(color: AppColors.slate800),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(2),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: children),
     );
     if (onTap == null) return card;
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(2),
       child: card,
     );
   }
@@ -48,6 +48,7 @@ class Pill extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: active ? AppColors.indigo600 : AppColors.slate800,
+        border: Border.all(color: active ? AppColors.slate100 : AppColors.slate700),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
@@ -55,7 +56,7 @@ class Pill extends StatelessWidget {
         style: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w500,
-          color: active ? Colors.white : AppColors.slate400,
+          color: active ? AppColors.slate100 : AppColors.slate600,
         ),
       ),
     );
@@ -75,11 +76,12 @@ class TagBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: tag == 'Article' ? AppColors.indigo600 : AppColors.slate700,
+        border: Border.all(color: AppColors.slate100),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
         tag,
-        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.white),
+        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.slate100),
       ),
     );
   }

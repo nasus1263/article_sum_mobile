@@ -59,15 +59,15 @@ class _LoginPageState extends State<LoginPage> {
       fillColor: AppColors.slate900,
       contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.all(Radius.circular(8)),
+        borderRadius: BorderRadius.all(Radius.circular(2)),
         borderSide: BorderSide(color: AppColors.slate700),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.all(Radius.circular(8)),
+        borderRadius: BorderRadius.all(Radius.circular(2)),
         borderSide: BorderSide(color: AppColors.slate700),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.all(Radius.circular(8)),
+        borderRadius: BorderRadius.all(Radius.circular(2)),
         borderSide: BorderSide(color: AppColors.indigo500),
       ),
     );
@@ -121,9 +121,9 @@ class _LoginPageState extends State<LoginPage> {
                   onPressed: _busy ? null : _submit,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.indigo600,
-                    foregroundColor: Colors.white,
+                    foregroundColor: AppColors.slate100,
                     padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(2)),
                   ),
                   child: Text(isSignIn ? 'Sign in' : 'Sign up', style: const TextStyle(fontWeight: FontWeight.w500)),
                 ),
