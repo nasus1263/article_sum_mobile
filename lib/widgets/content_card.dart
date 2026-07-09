@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-
+import '../models/content_record.dart';
+import '../services/content_repository.dart';
 import '../theme/app_colors.dart';
 
 class ContentCard extends StatelessWidget {
@@ -80,6 +81,73 @@ class TagBadge extends StatelessWidget {
         tag,
         style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.white),
       ),
+    );
+  }
+}
+
+class FavoriteStar extends StatefulWidget {
+  final ContentRecord record;
+  final VoidCallback onToggle;
+
+  const FavoriteStar({
+    super.key,
+    required this.record,
+    required this.onToggle,
+  });
+
+  @override
+  State<FavoriteStar> createState() => _FavoriteStarState();
+}
+
+class _FavoriteStarState extends State<FavoriteStar> {
+  late bool _favorited;
+  bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _favorited = widget.record.favoritedAt != null;
+  }
+
+  @override
+  void didUpdateWidget(covariant FavoriteStar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _favorited = widget.record.favoritedAt != null;
+  }
+
+  Future<void> _handleToggle() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      final repo = ContentRepository();
+      final nextState = !_favorited;
+      await repo.setFavorite(widget.record.id, nextState);
+      if (mounted) {
+        setState(() => _favorited = nextState);
+      }
+      widget.onToggle();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to update favorite: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _busy = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      icon: Icon(
+        _favorited ? Icons.star : Icons.star_border,
+        color: _favorited ? Colors.amber : AppColors.slate500,
+        size: 20,
+      ),
+      onPressed: _handleToggle,
     );
   }
 }

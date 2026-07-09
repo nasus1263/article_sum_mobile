@@ -82,16 +82,14 @@ class HomeShell extends StatefulWidget {
 
 class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
   int _index = 0;
-  int? _chatTargetId;
-  int _chatTargetSeq = 0;
 
   AppUser? _user;
   bool _authLoading = true;
   StreamSubscription<AuthState>? _authSub;
   final _clipboardWatcher = ClipboardWatcher();
 
-  static const _titles = ['Pending Approval', 'Archive', 'Chat', 'Settings'];
-  static const _settingsIndex = 3;
+  static const _titles = ['Categories', 'Pending Approval', 'Archive', 'Favorites', 'Settings'];
+  static const _settingsIndex = 4;
 
   @override
   void initState() {
@@ -135,11 +133,14 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
   }
 
   void _openChatWithArticle(int contentId) {
-    setState(() {
-      _chatTargetId = contentId;
-      _chatTargetSeq++;
-      _index = 2;
-    });
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => ChatPage(
+          initialContentId: contentId,
+          initialRequestSeq: 1,
+        ),
+      ),
+    );
   }
 
   Future<void> _signOut() async {
@@ -149,12 +150,10 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     final pages = [
+      ArchivePage(onChatWithArticle: _openChatWithArticle, variant: ArchiveVariant.categories),
       const PendingPage(),
-      ArchivePage(onChatWithArticle: _openChatWithArticle),
-      ChatPage(
-        initialContentId: _chatTargetId,
-        initialRequestSeq: _chatTargetSeq,
-      ),
+      ArchivePage(onChatWithArticle: _openChatWithArticle, variant: ArchiveVariant.archive),
+      ArchivePage(onChatWithArticle: _openChatWithArticle, variant: ArchiveVariant.favorites),
       const SettingsPage(),
     ];
 
@@ -183,12 +182,30 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
             ? const LoginPage()
             : IndexedStack(index: _index, children: pages),
       ),
+      floatingActionButton: _index != _settingsIndex && _user != null
+          ? FloatingActionButton(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const ChatPage(),
+                  ),
+                );
+              },
+              backgroundColor: AppColors.indigo600,
+              foregroundColor: Colors.white,
+              child: const Icon(Icons.chat_bubble_outline),
+            )
+          : null,
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
         onDestinationSelected: (i) => setState(() => _index = i),
         backgroundColor: AppColors.slate900,
         indicatorColor: AppColors.indigo600,
         destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.folder_outlined),
+            label: 'Categories',
+          ),
           NavigationDestination(
             icon: Icon(Icons.hourglass_empty),
             label: 'Pending',
@@ -198,8 +215,8 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
             label: 'Archive',
           ),
           NavigationDestination(
-            icon: Icon(Icons.chat_bubble_outline),
-            label: 'Chat',
+            icon: Icon(Icons.star_outline),
+            label: 'Favorites',
           ),
           NavigationDestination(
             icon: Icon(Icons.settings_outlined),

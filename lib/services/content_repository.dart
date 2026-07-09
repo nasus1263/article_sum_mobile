@@ -22,7 +22,7 @@ class ContentRepository {
     final client = await SupabaseClientProvider.getClient();
     final rows = await client
         .from('contents')
-        .select('id, url, tag, status, data, embedding, created_at')
+        .select('id, url, tag, status, data, embedding, favorited_at, created_at')
         .eq('status', status)
         .order('id', ascending: status == 'pending');
     return (rows as List)
@@ -51,6 +51,16 @@ class ContentRepository {
     await client.from('contents').delete().eq('id', id);
   }
 
+  Future<void> setFavorite(int id, bool favorited) async {
+    final client = await SupabaseClientProvider.getClient();
+    await client
+        .from('contents')
+        .update({
+          'favorited_at': favorited ? DateTime.now().toUtc().toIso8601String() : null,
+        })
+        .eq('id', id);
+  }
+
   Future<List<ContentRecord>> getRelated(int id) async {
     final client = await SupabaseClientProvider.getClient();
     final rows = await client.rpc(
@@ -71,7 +81,7 @@ class ContentRepository {
     final client = await SupabaseClientProvider.getClient();
     final response = await client
         .from('contents')
-        .select('id, url, tag, status, data, embedding, created_at')
+        .select('id, url, tag, status, data, embedding, favorited_at, created_at')
         .eq('id', id)
         .single();
     final record = ContentRecord.fromJson(response);

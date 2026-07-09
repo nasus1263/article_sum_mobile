@@ -26,6 +26,9 @@ class _PendingPageState extends State<PendingPage> {
   String _backendUrl = kDefaultBackendUrl;
   PipelineSettings _pipelineSettings = const PipelineSettings();
 
+  final _urlController = TextEditingController();
+  bool _submittingUrl = false;
+
   @override
   void initState() {
     super.initState();
@@ -36,6 +39,7 @@ class _PendingPageState extends State<PendingPage> {
 
   @override
   void dispose() {
+    _urlController.dispose();
     QueueEvents.updates.removeListener(_refresh);
     super.dispose();
   }
@@ -71,6 +75,34 @@ class _PendingPageState extends State<PendingPage> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _error = e.toString());
+    }
+  }
+
+  Future<void> _submitUrl() async {
+    final url = _urlController.text.trim();
+    if (url.isEmpty) return;
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a valid URL (http:// or https://)')),
+      );
+      return;
+    }
+    setState(() => _submittingUrl = true);
+    try {
+      await _repo.processLink(url, _backendUrl, settings: _pipelineSettings);
+      _urlController.clear();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Article is being prepared...')),
+      );
+      await _refresh();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to process URL: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _submittingUrl = false);
     }
   }
 
@@ -188,9 +220,68 @@ class _PendingPageState extends State<PendingPage> {
 
     return Column(
       children: [
-        // Active folder selector
+        // URL Submit Form
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _urlController,
+                  style: const TextStyle(color: AppColors.slate100, fontSize: 13),
+                  decoration: const InputDecoration(
+                    hintText: 'Paste a news article URL',
+                    hintStyle: TextStyle(color: AppColors.slate500),
+                    filled: true,
+                    fillColor: AppColors.slate900,
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(8)),
+                      borderSide: BorderSide(color: AppColors.slate700),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(8)),
+                      borderSide: BorderSide(color: AppColors.slate700),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(8)),
+                      borderSide: BorderSide(color: AppColors.indigo500),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              ElevatedButton(
+                onPressed: _submittingUrl ? null : _submitUrl,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.indigo600,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  minimumSize: Size.zero,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: _submittingUrl
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text('Create brief'),
+              ),
+            ],
+          ),
+        ),
+        // Active folder selector
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
           child: Row(
             children: [
               const Text(

@@ -144,7 +144,29 @@ class _ArchiveDetailPageState extends State<ArchiveDetailPage> {
     final images = r.data.images;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Archived item')),
+      appBar: AppBar(
+        title: const Text('Archived item'),
+        actions: [
+          FavoriteStar(
+            record: r,
+            onToggle: () {
+              setState(() {
+                _record = ContentRecord(
+                  id: r.id,
+                  url: r.url,
+                  tag: r.tag,
+                  status: r.status,
+                  data: r.data,
+                  createdAt: r.createdAt,
+                  similarity: r.similarity,
+                  embedding: r.embedding,
+                  favoritedAt: r.favoritedAt == null ? DateTime.now() : null,
+                );
+              });
+            },
+          ),
+        ],
+      ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(16),

@@ -76,6 +76,7 @@ class ContentRecord {
   final DateTime createdAt;
   final double? similarity;
   final List<double>? embedding;
+  final DateTime? favoritedAt;
 
   const ContentRecord({
     required this.id,
@@ -86,6 +87,7 @@ class ContentRecord {
     required this.createdAt,
     this.similarity,
     this.embedding,
+    this.favoritedAt,
   });
 
   factory ContentRecord.fromJson(Map<String, dynamic> json) {
@@ -100,6 +102,9 @@ class ContentRecord {
       createdAt: DateTime.parse(json['created_at'] as String),
       similarity: (json['similarity'] as num?)?.toDouble(),
       embedding: _parseEmbedding(json['embedding']),
+      favoritedAt: json['favorited_at'] != null
+          ? DateTime.parse(json['favorited_at'] as String)
+          : null,
     );
   }
 

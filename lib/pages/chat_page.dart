@@ -237,8 +237,17 @@ class _ChatPageState extends State<ChatPage> {
 
   @override
   Widget build(BuildContext context) {
-    if (_selectedId == null) return _buildSessionList();
-    return _buildConversation();
+    if (_selectedId == null) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Chat'),
+        ),
+        body: SafeArea(child: _buildSessionList()),
+      );
+    }
+    return Scaffold(
+      body: SafeArea(child: _buildConversation()),
+    );
   }
 
   Widget _buildSessionList() {
@@ -365,7 +374,13 @@ class _ChatPageState extends State<ChatPage> {
             children: [
               IconButton(
                 icon: const Icon(Icons.arrow_back, color: AppColors.slate300),
-                onPressed: _closeSession,
+                onPressed: () {
+                  if (widget.initialContentId != null) {
+                    Navigator.of(context).pop();
+                  } else {
+                    _closeSession();
+                  }
+                },
               ),
               Expanded(
                 child: Column(
